@@ -212,7 +212,7 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.layer.borderWidth = 8
         self.volumeBackgroundView.layer.cornerRadius = VOLUME_CORNER_RADIUS
         self.z2BackgroundView.layer.borderWidth = 4
-        self.z2BackgroundView.layer.cornerRadius = 30
+        self.z2BackgroundView.layer.cornerRadius = 20
     }
     
     @objc fileprivate func appDidBecomeActive() {
