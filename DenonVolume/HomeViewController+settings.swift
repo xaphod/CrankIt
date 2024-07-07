@@ -58,11 +58,6 @@ extension HomeViewController {
         alert.addAction(UIAlertAction.init(title: "Rename input sources", style: .default, handler: { (_) in
             self.inputSourcesRename(sender: sender)
         }))
-        alert.addAction(UIAlertAction.init(title: "Move buttons to other side", style: .default, handler: { (_) in
-            UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: "hvc.stackviewLeft"), forKey: "hvc.stackviewLeft")
-            self.updateStackviewConstraints()
-            self.view.layoutIfNeeded()
-        }))
         if AudioController.shared.filename == "sweep" {
             alert.addAction(UIAlertAction.init(title: "Stop continuous frequency sweeps", style: .destructive, handler: { (_) in
                 AudioController.shared.filename = nil

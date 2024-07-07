@@ -239,12 +239,7 @@ class HomeViewController: UIViewController {
     var stackviewConstraint: NSLayoutConstraint?
     func updateStackviewConstraints() {
         self.stackviewConstraint?.isActive = false
-        let constraint: NSLayoutConstraint
-        if UserDefaults.standard.bool(forKey: "hvc.stackviewLeft") {
-            constraint = self.buttonsStackview.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 20)
-        } else {
-            constraint = self.buttonsStackview.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
-        }
+        let constraint = self.buttonsStackview.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
         constraint.isActive = true
         self.stackviewConstraint = constraint
     }

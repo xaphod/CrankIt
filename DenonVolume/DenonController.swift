@@ -40,15 +40,8 @@ class DenonController {
     weak var hvc: HomeViewController?
     
     var maxAllowedSafeVolume: Double {
-        get {
-            let retval = UserDefaults.standard.value(forKey: "dc.maximumVolume") as? Double ?? 80.0
-            DLog("DC get maxAllowedSafeVolume -> \(retval)")
-            return retval
-        }
-        set {
-            DLog("DC set maxAllowedSafeVolume -> \(newValue)")
-            UserDefaults.standard.set(newValue, forKey: "dc.maximumVolume")
-        }
+        get { UserDefaults.standard.value(forKey: "dc.maximumVolume") as? Double ?? 80.0 }
+        set { UserDefaults.standard.set(newValue, forKey: "dc.maximumVolume") }
     }
 
     // min instead of 0. Reduce the range by this much to make it more sensitive
