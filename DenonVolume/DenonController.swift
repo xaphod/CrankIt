@@ -218,39 +218,39 @@ class DenonController {
         self.streams = nil
     }
     
-    @objc func volumeUp() {
-        DLog("DC volumeUp()")
-        guard
-            let muteState = self.lastMute,
-            !muteState,
-            let powerState = self.lastPower,
-            powerState
-        else { return }
-        
-        self.readVolume { (_) in
-            guard let volume = self.lastVolume else { return }
-            self.setVolume(min(self.volumeMax, volume+2.0)) { (vol, err) in
-                self.hvc?.updateVolume(vol)
-            }
-        }
-    }
-    
-    @objc func volumeDown() {
-        DLog("DC volumeDown()")
-        guard
-            let muteState = self.lastMute,
-            !muteState,
-            let powerState = self.lastPower,
-            powerState
-        else { return }
-
-        self.readVolume { (_) in
-            guard let volume = self.lastVolume else { return }
-             self.setVolume(max(0, volume-2.0)) { (vol, err) in
-                self.hvc?.updateVolume(vol)
-            }
-        }
-    }
+//    @objc func volumeUp(isZone2: Bool) {
+//        DLog("DC volumeUp()")
+//        guard
+//            let muteState = self.lastMute,
+//            !muteState,
+//            let powerState = self.lastPower,
+//            powerState
+//        else { return }
+//        
+//        self.readVolume { (_) in
+//            guard let volume = self.lastVolume else { return }
+//            self.setVolume(min(self.volumeMax, volume+2.0)) { (vol, err) in
+//                self.hvc?.updateVolume(vol, isZone2: isZone2)
+//            }
+//        }
+//    }
+//    
+//    @objc func volumeDown(isZone2: Bool) {
+//        DLog("DC volumeDown()")
+//        guard
+//            let muteState = self.lastMute,
+//            !muteState,
+//            let powerState = self.lastPower,
+//            powerState
+//        else { return }
+//
+//        self.readVolume { (_) in
+//            guard let volume = self.lastVolume else { return }
+//            self.setVolume(max(0, volume-2.0)) { (vol, err) in
+//                self.hvc?.updateVolume(vol, isZone2: isZone2)
+//            }
+//        }
+//    }
     
     func readMultiEQState(_ completionBlock: CommandNoResponseBlock = nil) {
         guard !self.demoMode else {
@@ -286,26 +286,26 @@ class DenonController {
         }
     }
     
-    func setSource(_ source: String, completionBlock: CommandBoolResponseBlock = nil) {
-        guard !self.demoMode else {
-            completionBlock?(true, nil)
-            return
-        }
-
-        var sourceMod = source
-        if source == "MPLAY" {
-            sourceMod = "SMPLAY"
-        }
-        self.issueCommand("SI\(sourceMod)", minLength: 2+source.count, responseLineRegex: "SI\(source).*", timeoutBlock: {
-            completionBlock?(nil, CommandError.tryAgain)
-        }) { (str, err) in
-            guard let str = str else {
-                completionBlock?(nil, err ?? CommandError.noDataReturned)
-                return
-            }
-            completionBlock?(str.hasPrefix("SI\(source)"), nil)
-        }
-    }
+//    func setSource(_ source: String, completionBlock: CommandBoolResponseBlock = nil) {
+//        guard !self.demoMode else {
+//            completionBlock?(true, nil)
+//            return
+//        }
+//
+//        var sourceMod = source
+//        if source == "MPLAY" {
+//            sourceMod = "SMPLAY"
+//        }
+//        self.issueCommand("SI\(sourceMod)", minLength: 2+source.count, responseLineRegex: "SI\(source).*", timeoutBlock: {
+//            completionBlock?(nil, CommandError.tryAgain)
+//        }) { (str, err) in
+//            guard let str = str else {
+//                completionBlock?(nil, err ?? CommandError.noDataReturned)
+//                return
+//            }
+//            completionBlock?(str.hasPrefix("SI\(source)"), nil)
+//        }
+//    }
     
     func readPowerAndZ2State(_ completionBlock: CommandBoolResponseBlock = nil) {
         guard !self.demoMode else {
