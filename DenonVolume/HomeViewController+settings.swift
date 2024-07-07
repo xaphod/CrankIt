@@ -35,7 +35,7 @@ extension HomeViewController {
 
         alert.addAction(UIAlertAction.init(title: "Change volume style to \(volStyleDesc)", style: .default, handler: { (_) in
             self.volumeDisplayStyle = nextVolStyle
-            self.updateVolume(self.denon?.lastVolume)
+            self.updateVolume(self.denon?.lastVolume, isZone2: self.zone == 2)
         }))
         alert.addAction(UIAlertAction.init(title: "Change volume limit (\(self.denon?.maxAllowedSafeVolume ?? 80))", style: .default, handler: { (_) in
             self.changeVolumeLimit()
@@ -187,7 +187,7 @@ extension HomeViewController {
                 case "high": self.highPreset = val
                 case "minimum":
                     self.denon?.minimumVolume = val
-                    self.updateVolume(self.denon?.lastVolume)
+                    self.updateVolume(self.denon?.lastVolume, isZone2: self.zone == 2)
 
                 default: break
                 }

@@ -77,7 +77,7 @@ class AudioController {
             DLog("AudioController: setting vol=\(av.outputVolume)")
 
             self.volumeSetInProgress = true
-            AppDelegate.shared.denon?.setVolume(volumeBetween0and1: av.outputVolume) { (v, _) in
+            AppDelegate.shared.denon?.setVolume(volumeBetween0and1: av.outputVolume, isZone2: AppDelegate.shared.zone == 2) { (v, _) in
                 assert(Thread.current.isMainThread)
 
                 if let v = v {
@@ -89,7 +89,7 @@ class AudioController {
                 }
                 self.volumeSetQueueOfOne = nil
                 
-                denon.setVolume(volumeBetween0and1: queued) { (v, _) in
+                denon.setVolume(volumeBetween0and1: queued, isZone2: AppDelegate.shared.zone == 2) { (v, _) in
                     if let v = v {
                         NotificationCenter.default.post(name: .volumeChangedByButton, object: nil, userInfo: ["volume":v])
                     }

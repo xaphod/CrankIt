@@ -73,7 +73,8 @@ class DenonController {
     var volumeMax = 98.0 {
         didSet {
             if self.verbose == true { DLog("Setting volumeMax to \(self.volumeMax)") }
-            self.hvc?.updateVolume(self.lastVolume)
+            self.hvc?.updateVolume(self.lastVolume, isZone2: false)
+            self.hvc?.updateVolume(self.zone2Volume, isZone2: true)
         }
     }
     var streams: DenonStreams?
@@ -428,19 +429,23 @@ class DenonController {
         }
     }
     
-    func toggleMuteState(_ completionBlock: CommandNoResponseBlock = nil) {
+    func toggleMuteState(isZone2: Bool, _ completionBlock: CommandNoResponseBlock = nil) {
         guard !self.demoMode else {
             self.lastMute = !(self.lastMute!)
             completionBlock?(nil)
             return
         }
 
-        guard let muteState = self.lastMute else {
+        let muteBool = isZone2 ? self.zone2Mute : self.lastMute
+        guard let muteState = muteBool else {
             self.readMuteState()
             completionBlock?(.tryAgain)
             return
         }
-        let cmd = muteState ? "MUOFF" : "MUON"
+        var cmd = muteState ? "MUOFF" : "MUON"
+        if isZone2 {
+            cmd = "Z2\(cmd)"
+        }
         self.issueCommand(cmd, minLength: 4, responseLineRegex: "\(cmd).*", timeoutBlock: {
             completionBlock?(nil)
         }) { (str, error) in
@@ -448,7 +453,11 @@ class DenonController {
                 completionBlock?(error ?? CommandError.noDataReturned)
                 return
             }
-            self.lastMute = !muteState
+            if isZone2 {
+                self.zone2Mute = !muteState
+            } else {
+                self.lastMute = !muteState
+            }
             completionBlock?(nil)
         }
     }
@@ -459,26 +468,33 @@ class DenonController {
             completionBlock?(nil)
             return
         }
-
-        self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
-            completionBlock?(.tryAgain)
-        }) { (str, err) in
-            guard let _ = str else {
-                completionBlock?(err ?? CommandError.noDataReturned)
-                return
+        
+        let work = {
+            self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
+                completionBlock?(.tryAgain)
+            }) { (str, err) in
+                guard let _ = str else {
+                    completionBlock?(err ?? CommandError.noDataReturned)
+                    return
+                }
+                completionBlock?(nil)
             }
-            completionBlock?(nil)
+        }
+        self.issueCommand("Z2?", minLength: 4, responseLineRegex: nil, timeoutBlock: {
+            work()
+        }) { (_, _) in
+            work()
         }
     }
     
-    func setVolume(volumeBetween0and1: Float, _ completionBlock: CommandDoubleResponseBlock = nil) {
+    func setVolume(volumeBetween0and1: Float, isZone2: Bool, _ completionBlock: CommandDoubleResponseBlock = nil) {
         // translate 0...1 to minimumVolume...maxAllowedSafeVolume
         let volume = (Double(volumeBetween0and1) * (maxAllowedSafeVolume - minimumVolume)) + minimumVolume
-        self.setVolume(volume, completionBlock)
+        self.setVolume(volume, isZone2: isZone2, completionBlock)
     }
     
     // Expects whole values from 0...volumeMax only!
-    func setVolume(_ volumeDouble: Double, _ completionBlock: CommandDoubleResponseBlock = nil) {
+    func setVolume(_ volumeDouble: Double, isZone2: Bool, _ completionBlock: CommandDoubleResponseBlock = nil) {
         guard (0...98).contains(volumeDouble) else {
             completionBlock?(nil, .invalidInput)
             return
@@ -490,16 +506,18 @@ class DenonController {
             return
         }
         
-        if self.lastMute == true {
+        let muteBool = isZone2 ? self.zone2Mute : self.lastMute
+        if muteBool == true {
             self.readMuteState()
             completionBlock?(nil, .cannotChangeVolumeWhileMuted)
             return
         }
 
-        if let lastVolume = self.lastVolume, lastVolume == volumeDouble {
-            DLog("DC setVolume(\(volumeDouble)) - is lastVolume, doing a read instead")
+        let volumeBool = isZone2 ? self.zone2Volume : self.lastVolume
+        if let lastVolume = volumeBool, lastVolume == volumeDouble {
+            DLog("DC setVolume(\(volumeDouble)) - no change, doing a read instead")
             self.readVolume() { (err) in
-                completionBlock?(self.lastVolume, err)
+                completionBlock?(isZone2 ? self.zone2Volume : self.lastVolume, err)
             }
             return
         }
@@ -512,10 +530,10 @@ class DenonController {
             val = String(format: "%02d5", Int(volumeDouble))
         }
 
-        self.issueCommand("MV\(val)", minLength: 2, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: #"(Z2|MV)(?!MAX).*"#, timeoutBlock: {
             completionBlock?(nil, .tryAgain) // don't report old values here since changing so fast
         }) { (str, err) in
-            DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil")")
+            DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil") for zone \(isZone2 ? "2" : "1")")
 
             guard let str = str else {
                 completionBlock?(nil, err ?? CommandError.noDataReturned)
@@ -525,7 +543,11 @@ class DenonController {
                 completionBlock?(nil, err ?? CommandError.dataReturnedNotUnderstood)
                 return
             }
-            self.lastVolume = dbl
+            if isZone2 {
+                self.zone2Volume = dbl
+            } else {
+                self.lastVolume = dbl
+            }
             completionBlock?(dbl, nil)
         }
     }
@@ -640,6 +662,7 @@ class DenonController {
             if let vol = self.volumeFromString(String(line)) {
                 DispatchQueue.main.async {
                     self.zone2Volume = vol
+                    self.hvc?.updateVolume(vol, isZone2: true)
                 }
                 return true
             }
@@ -687,7 +710,7 @@ class DenonController {
             DispatchQueue.main.async {
                 let vol = self.volumeFromString(String(line))
                 self.lastVolume = vol
-                self.hvc?.updateVolume(vol)
+                self.hvc?.updateVolume(vol, isZone2: false)
             }
             return true
         }

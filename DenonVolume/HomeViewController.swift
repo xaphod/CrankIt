@@ -9,7 +9,7 @@
 import UIKit
 
 class HomeViewController: UIViewController {
-    var zone = 1 // 1 or 2
+    var zone: Int { get { AppDelegate.shared.zone } set { AppDelegate.shared.zone = newValue } }
 
     var denon: DenonController? {
         get {
@@ -232,7 +232,7 @@ class HomeViewController: UIViewController {
             guard let initialState = initialState else {
                 return
             }
-            self.updateVolume(initialState.volume)
+            self.updateVolume(initialState.volume, isZone2: self.zone == 2)
             self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source)
             self.powerCoverView.isHidden = initialState.poweredOn
@@ -305,25 +305,25 @@ class HomeViewController: UIViewController {
             return
         }
         self.selectionFeedback.selectionChanged()
-        self.updateVolume(v)
+        self.updateVolume(v, isZone2: self.zone == 2)
     }
     
     @IBAction func setVolLow(_ sender: Any) {
-        self.denon?.setVolume(self.lowPreset) { (v, _) in
+        self.denon?.setVolume(self.lowPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     @IBAction func setVolMedium(_ sender: Any) {
-        self.denon?.setVolume(self.medPreset) { (v, _) in
+        self.denon?.setVolume(self.medPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     @IBAction func setVolHigh(_ sender: Any) {
-        self.denon?.setVolume(self.highPreset) { (v, _) in
+        self.denon?.setVolume(self.highPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     
@@ -348,7 +348,7 @@ class HomeViewController: UIViewController {
     }
     
     @IBAction func muteButtonPressed(_ sender: Any) {
-        self.denon?.toggleMuteState() { (err) in
+        self.denon?.toggleMuteState(isZone2: self.zone == 2) { (err) in
             if err == nil {
                 self.impactFeedbackHeavy.impactOccurred()
             }
@@ -366,7 +366,7 @@ class HomeViewController: UIViewController {
                 return
             }
             self.impactFeedbackHeavy.impactOccurred()
-            self.updateVolume(initialState.volume)
+            self.updateVolume(initialState.volume, isZone2: self.zone == 2)
             self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source)
             self.powerCoverView.isHidden = initialState.poweredOn
@@ -400,8 +400,8 @@ class HomeViewController: UIViewController {
         }
     }
         
-    // TODO: update for Z2
-    func updateVolume(_ volume: Double?) {
+    // TODO: use isZone2
+    func updateVolume(_ volume: Double?, isZone2: Bool) {
         let isMuted = self.denon?.lastMute
         self.view.layoutIfNeeded()
         assert(Thread.current.isMainThread)
@@ -452,7 +452,7 @@ class HomeViewController: UIViewController {
             self.muteButton.setImage(mutedImage, for: .normal)
             self.volumeForegroundView.backgroundColor = muted ? Colors.darkGray : Colors.reverseTint
             self.volumeBackgroundView.layer.borderColor = muted ? Colors.darkGray.cgColor : Colors.reverseTint.cgColor
-            self.updateVolume(self.denon?.lastVolume)
+            self.updateVolume(self.denon?.lastVolume, isZone2: isZone2)
         }
         if let muteState = muteState {
             work(muteState, nil)
@@ -522,7 +522,8 @@ class HomeViewController: UIViewController {
         self.volumeLastDesiredInPan = result
 //        DLog("percentOfFullVolumeRange = \(percentOfFullVolumeRange * 100), resultInt = \(resultInt), setting")
 
-        self.denon?.setVolume(result) { (v, err) in
+        // TODO: HANDLE ZONE2 GESTURE TOO
+        self.denon?.setVolume(result, isZone2: false) { (v, err) in
             if let err = err {
                 if self.denon?.verbose ?? false { DLog("pan setVolume, ERROR: \(err)") }
             }
@@ -533,7 +534,7 @@ class HomeViewController: UIViewController {
                 self.selectionFeedback?.selectionChanged()
             }
             self.volumeLastSetInPan = v
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     

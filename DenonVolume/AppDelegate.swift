@@ -14,6 +14,7 @@ import StoreKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var denon: DenonController?
+    var zone = 1 // which zone the UI is showing, and is being controlled by physical vol buttons
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
