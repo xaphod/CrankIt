@@ -18,6 +18,7 @@ class HomeViewController: UIViewController {
         }
     }
 
+    // TODO: update for Z2
     var panSlowly = false {
         didSet {
             self.volumeBackgroundView.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
@@ -90,7 +91,10 @@ class HomeViewController: UIViewController {
     
     @IBOutlet weak var volumeBackgroundView: UIView!
     @IBOutlet weak var volumeForegroundView: UIView!
-    
+
+    @IBOutlet weak var z2BackgroundView: UIView!
+    @IBOutlet weak var z2ForegroundView: UIView!
+
     @IBOutlet weak var buttonsStackview: UIStackView!
     @IBOutlet weak var surroundModeLabel: UILabel!
     @IBOutlet weak var volumeLabel: UILabel!
@@ -127,7 +131,9 @@ class HomeViewController: UIViewController {
         self.longPressGesture.delegate = self
         self.volumeForegroundView.clipsToBounds = true
         self.volumeBackgroundView.clipsToBounds = true
-        
+        self.z2ForegroundView.clipsToBounds = true
+        self.z2BackgroundView.clipsToBounds = true
+
         let feedbackStyle: UIImpactFeedbackGenerator.FeedbackStyle
         if #available(iOS 13.0, *) {
             feedbackStyle = .rigid
@@ -205,6 +211,8 @@ class HomeViewController: UIViewController {
         super.viewDidLayoutSubviews()
         self.volumeBackgroundView.layer.borderWidth = 8
         self.volumeBackgroundView.layer.cornerRadius = VOLUME_CORNER_RADIUS
+        self.z2BackgroundView.layer.borderWidth = 4
+        self.z2BackgroundView.layer.cornerRadius = 30
     }
     
     @objc fileprivate func appDidBecomeActive() {
@@ -256,6 +264,9 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.backgroundColor = Colors.tint
         self.volumeBackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.volumeForegroundView.backgroundColor = Colors.reverseTint
+        self.z2BackgroundView.backgroundColor = Colors.tint
+        self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
+        self.z2ForegroundView.backgroundColor = Colors.reverseTint
         self.volButtonLow.backgroundColor = Colors.green
         self.volButtonMed.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
@@ -387,6 +398,7 @@ class HomeViewController: UIViewController {
         }
     }
         
+    // TODO: update for Z2
     func updateVolume(_ volume: Double?) {
         let isMuted = self.denon?.lastMute
         self.view.layoutIfNeeded()
@@ -419,6 +431,7 @@ class HomeViewController: UIViewController {
         }
     }
     
+    // TODO: update for Z2
     func updateMuteState(muteState: Bool? = nil) {
         let work: (Bool?, Error?)->Void = { (muted, error) in
             let mutedImage: UIImage
@@ -463,6 +476,7 @@ class HomeViewController: UIViewController {
         }
     }
     
+    // TODO: update for Z2
     // does not have ended state
     @IBAction func handlePan(_ gesture: UIPanGestureRecognizer) {
         if self.panBeginning {
