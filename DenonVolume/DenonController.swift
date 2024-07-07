@@ -35,7 +35,7 @@ protocol DenonSetting {
 }
 
 class DenonController {
-    let verbose = false
+    let verbose = true
     
     weak var hvc: HomeViewController?
     
@@ -310,19 +310,37 @@ class DenonController {
 
         self.issueCommand("PW?", minLength: 4, responseLineRegex: #"(PWON)|(PWSTANDBY)"#, timeoutBlock: {
             completionBlock?(self.lastPower, nil)
-        }) { (str, err) in
-            guard let str = str else {
+        }) { (pwstr, err) in
+            guard let pwstr = pwstr else {
                 completionBlock?(nil, err ?? CommandError.noDataReturned)
                 return
             }
-            if str.hasPrefix("PWON") {
-                self.lastPower = true
-                completionBlock?(true, nil)
-            } else if str.hasPrefix("PWSTANDBY") {
-                self.lastPower = false
-                completionBlock?(false, nil)
-            } else {
-                completionBlock?(nil, .dataReturnedNotUnderstood)
+            
+            let work = {
+                if pwstr.hasPrefix("PWON") {
+                    self.lastPower = true
+                    completionBlock?(true, nil)
+                } else if pwstr.hasPrefix("PWSTANDBY") {
+                    self.lastPower = false
+                    completionBlock?(false, nil)
+                } else {
+                    completionBlock?(nil, .dataReturnedNotUnderstood)
+                }
+            }
+            
+            // these are processed as events in parseResponseHelper() below
+            // PW? actually does yield Z2ON when zone 2 is on, but, Z2? gets the rest of the zone2 info; example response:
+            /*
+             Z2ON
+             Z2NET
+             Z201
+             SVON
+             */
+            // Note: Z201 means "zone 2 volume is currently set to 01"
+            self.issueCommand("Z2?", minLength: 4, responseLineRegex: nil, timeoutBlock: {
+                work()
+            }) { (_, _) in
+                work()
             }
         }
     }
@@ -352,6 +370,7 @@ class DenonController {
                 }
             }
 
+            // TODO: update for z2
             self.issueCommand("Z2?", minLength: 4, responseLineRegex: #"(Z2ON)||(Z2OFF)"#, timeoutBlock: {
                 work()
             }) { (str, _) in
@@ -561,6 +580,10 @@ class DenonController {
     // handle side-effects of parsing output that wasn't asked for
     // NOT ON MAIN THREAD
     func parseResponseHelper(line: String.SubSequence) -> Bool {
+        if self.verbose {
+            DLog("parseResponseHelper (event): \(line)")
+        }
+        
         if line.hasPrefix("MVMAX") {
             DispatchQueue.main.async {
                 let maxVol = self.volumeFromString(String(line))
