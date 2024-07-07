@@ -233,7 +233,7 @@ class HomeViewController: UIViewController {
                 return
             }
             self.updateVolume(initialState.volume)
-            self.updateMuteState(muteState: initialState.isMuted)
+            self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source)
             self.powerCoverView.isHidden = initialState.poweredOn
         }
@@ -328,7 +328,7 @@ class HomeViewController: UIViewController {
     }
     
     @IBAction func sourcesButtonPressed(_ sender: Any) {
-        let alert = UIAlertController.init(title: "Select Source", message: "Not all sources are available on all Denon receivers.", preferredStyle: .actionSheet)
+        let alert = UIAlertController.init(title: "Select Source", message: "Not all sources are available on all receivers.", preferredStyle: .actionSheet)
         InputSourceSetting.Input.allCases.map { InputSourceSetting.init(input: $0, isZone2: self.zone == 2) }.forEach { source in
             guard source.isHidden == false && source.input != .unknown else { return }
             alert.addAction(UIAlertAction.init(title: source.displayLong, style: .default, handler: { (_) in
@@ -352,7 +352,7 @@ class HomeViewController: UIViewController {
             if err == nil {
                 self.impactFeedbackHeavy.impactOccurred()
             }
-            self.updateMuteState()
+            self.updateMuteState(muteState: nil, isZone2: self.zone == 2)
         }
     }
     
@@ -367,7 +367,7 @@ class HomeViewController: UIViewController {
             }
             self.impactFeedbackHeavy.impactOccurred()
             self.updateVolume(initialState.volume)
-            self.updateMuteState(muteState: initialState.isMuted)
+            self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source)
             self.powerCoverView.isHidden = initialState.poweredOn
             self.buttons.forEach { $0.isEnabled = true }
@@ -433,8 +433,10 @@ class HomeViewController: UIViewController {
         }
     }
     
-    // TODO: update for Z2
-    func updateMuteState(muteState: Bool? = nil) {
+    func updateMuteState(muteState: Bool? = nil, isZone2: Bool) {
+        // only update our state if this is about the zone
+        if (isZone2 && self.zone != 2) || (!isZone2 && self.zone == 2) { return }
+
         let work: (Bool?, Error?)->Void = { (muted, error) in
             let mutedImage: UIImage
             if #available(iOS 13.0, *) {
