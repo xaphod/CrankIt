@@ -9,6 +9,8 @@
 import UIKit
 
 class HomeViewController: UIViewController {
+    var zone = 1 // 1 or 2
+
     var denon: DenonController? {
         get {
             return AppDelegate.shared.denon
@@ -327,7 +329,7 @@ class HomeViewController: UIViewController {
     
     @IBAction func sourcesButtonPressed(_ sender: Any) {
         let alert = UIAlertController.init(title: "Select Source", message: "Not all sources are available on all Denon receivers.", preferredStyle: .actionSheet)
-        InputSourceSetting.values.forEach { source in
+        InputSourceSetting.Input.allCases.map { InputSourceSetting.init(input: $0, isZone2: self.zone == 2) }.forEach { source in
             guard source.isHidden == false && source.input != .unknown else { return }
             alert.addAction(UIAlertAction.init(title: source.displayLong, style: .default, handler: { (_) in
                 source.setValue(denon: self.denon) { (err) in

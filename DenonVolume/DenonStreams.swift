@@ -261,10 +261,6 @@ class DenonStreams {
             return retval
         }
         self.unprocessedReceived = (linesNotParsedAsEvents ?? "") + (incomplete ?? "")
-        if let linesNotParsedAsEvents = linesNotParsedAsEvents, self.dc?.verbose == true {
-            DLog("DenonStreams checkIfComplete: unprocessedReceived.count=\(self.unprocessedReceived.count), extra chars:\n")
-            DLog(linesNotParsedAsEvents.replacingOccurrences(of: "\r", with: "\n"))
-        }
         return nil
     }
 }

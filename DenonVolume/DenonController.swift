@@ -598,7 +598,7 @@ class DenonController {
                 if let newSource = InputSourceSetting.init(str: String(line)) {
                     self.lastSource = newSource
                 } else {
-                    var source = InputSourceSetting.init(input: .unknown)
+                    var source = InputSourceSetting.init(input: .unknown, isZone2: false)
                     let index = line.index(line.startIndex, offsetBy: 2)
                     source.code = String(line)
                     source.displayLong = String(line.suffix(from: index))

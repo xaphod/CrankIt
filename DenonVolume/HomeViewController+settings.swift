@@ -79,7 +79,7 @@ extension HomeViewController {
     
     func inputSourcesShowOrHide(sender: UIView) {
         let alert = UIAlertController.init(title: "Select source to show or hide", message: "This controls which sources are shown in the list when you hit the source button.", preferredStyle: .actionSheet)
-        InputSourceSetting.values.forEach { source in
+        InputSourceSetting.Input.allCases.map { InputSourceSetting.init(input: $0, isZone2: self.zone == 2) }.forEach { source in
             guard source.input != .unknown else { return }
             var source = source
             alert.addAction(UIAlertAction.init(title: (source.isHidden ? "Show " : "Hide ") + source.displayLong, style: source.isHidden ? .default : .destructive, handler: { (_) in
@@ -95,7 +95,7 @@ extension HomeViewController {
     
     func inputSourcesRename(sender: UIView) {
         let alert = UIAlertController.init(title: "Select a source to rename", message: nil, preferredStyle: .actionSheet)
-        InputSourceSetting.values.forEach { source in
+        InputSourceSetting.Input.allCases.map { InputSourceSetting.init(input: $0, isZone2: self.zone == 2) }.forEach { source in
             guard source.isHidden == false && source.input != .unknown else { return }
             alert.addAction(UIAlertAction.init(title: source.displayLong, style: .default, handler: { (_) in
                 self.inputSourceRename(source: source, sender: sender)
