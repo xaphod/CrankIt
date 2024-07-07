@@ -197,7 +197,7 @@ Here are things you can do that might not be obvious:
 
 - if you hold your finger down for a second before starting to swipe (ie. long-press then swipe), the bar turns yellow and the volume change rate is slower. This is for when you want to make minor changes to the volume
 
-- you can use the volume up/down buttons (on the side of the phone), even when the app is in the background, or when the phone is locked / screen off
+- after enabling the volume buttons (last option on the menu) you can use the phone's volume up/down buttons even when the app is in the background, or when the phone is locked / screen off
 """
             , preferredStyle: .alert)
         alert.addAction(UIAlertAction.init(title: "OK", style: .cancel, handler: nil))
