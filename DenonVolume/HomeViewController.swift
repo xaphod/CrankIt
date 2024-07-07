@@ -367,14 +367,7 @@ class HomeViewController: UIViewController {
     }
     
     @IBAction func limitButtonPressed(_ sender: Any) {
-        let alert = UIAlertController.init(title: "Remove Limit?", message: "Warning, this allows the app to turn up the volume REALLY loud. An accidental swipe or a bug in the app could blow your speakers.", preferredStyle: .alert)
-        alert.addAction(UIAlertAction.init(title: "Remove Limit", style: .destructive, handler: { (_) in
-            self.denon?.maxAllowedSafeVolume = nil
-            self.limitButton.alpha = 0
-            self.limitLineView.alpha = 0
-        }))
-        alert.addAction(UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil))
-        self.present(alert, animated: true, completion: nil)
+        self.changeVolumeLimit()
     }
     
     func updateSource(source: InputSourceSetting?) {

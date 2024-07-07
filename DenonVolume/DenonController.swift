@@ -39,16 +39,15 @@ class DenonController {
     
     weak var hvc: HomeViewController?
     
-    private var _maxAllowedSafeVolume: Double? = 80
-    var maxAllowedSafeVolume: Double? {
+    var maxAllowedSafeVolume: Double {
         get {
-            if UserDefaults.standard.bool(forKey: "hvc.permanentlyOverrideMaxSafeVol") {
-                return self.volumeMax
-            }
-            return _maxAllowedSafeVolume
+            let retval = UserDefaults.standard.value(forKey: "dc.maximumVolume") as? Double ?? 80.0
+            DLog("DC get maxAllowedSafeVolume -> \(retval)")
+            return retval
         }
         set {
-            _maxAllowedSafeVolume = newValue
+            DLog("DC set maxAllowedSafeVolume -> \(newValue)")
+            UserDefaults.standard.set(newValue, forKey: "dc.maximumVolume")
         }
     }
 

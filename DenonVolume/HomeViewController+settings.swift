@@ -37,8 +37,8 @@ extension HomeViewController {
             self.volumeDisplayStyle = nextVolStyle
             self.updateVolume(self.denon?.lastVolume)
         }))
-        alert.addAction(UIAlertAction.init(title: "Permanently remove volume limit", style: .default, handler: { (_) in
-            self.permRemoveVolLimit()
+        alert.addAction(UIAlertAction.init(title: "Change volume limit (\(self.denon?.maxAllowedSafeVolume ?? 80))", style: .default, handler: { (_) in
+            self.changeVolumeLimit()
         }))
         alert.addAction(UIAlertAction.init(title: "Change high volume preset", style: .default, handler: { (_) in
             self.changePreset(key: "high")
@@ -137,13 +137,27 @@ extension HomeViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
-    func permRemoveVolLimit() {
-        let alert = UIAlertController.init(title: "Permanently Remove Volume Limit", message: "Are you sure? If you do this, nothing will prevent you from accidentally swiping your speakers into explosion mode. To get the limit back, delete & reinstall the app.", preferredStyle: .alert)
+    func changeVolumeLimit() {
+        let alert = UIAlertController.init(title: "Change Volume Limit", message: "This sets the maximum volume you can swipe to. You can still go beyond this point using the volume preset buttons." + "\n\n" + "Please enter a number between 0 and 98.\n0 = -80 dB\n80 = 0 dB\n98 = speakers probably blown apart", preferredStyle: .alert)
+        alert.addTextField { (tf) in
+            tf.keyboardType = .decimalPad
+            tf.text = String(self.denon?.maxAllowedSafeVolume ?? 80)
+        }
         alert.addAction(UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction.init(title: "Remove Limit", style: .destructive, handler: { (_) in
-            UserDefaults.standard.set(true, forKey: "hvc.permanentlyOverrideMaxSafeVol")
-            self.limitLineView.alpha = 0
-            self.limitButton.alpha = 0
+        alert.addAction(UIAlertAction.init(title: "OK", style: .default, handler: { (_) in
+            guard let str = alert.textFields?[0].text, let val = Double(str)?.round(nearest: 0.5) else {
+                return
+            }
+            guard val >= 0 && val <= 98 else {
+                let failAlert = UIAlertController.init(title: "Oops", message: "That's not a number between 0 and 98. Please try again.", preferredStyle: .alert)
+                failAlert.addAction(UIAlertAction.init(title: "OK", style: .default, handler: { (_) in
+                    self.changeVolumeLimit()
+                }))
+                self.present(failAlert, animated: true, completion: nil)
+                return
+            }
+            
+            self.denon?.maxAllowedSafeVolume = val
         }))
         self.present(alert, animated: true, completion: nil)
     }
