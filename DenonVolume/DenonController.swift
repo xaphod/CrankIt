@@ -84,7 +84,7 @@ class DenonController {
     private let queue = DispatchQueue.init(label: "com.solodigitalis.denonVolume")
     
     init(receiver: Receiver) {
-        DLog("DC INIT")
+        DLog("DC INIT: ipAddress = \(receiver.ipAddress!)")
         self.host = receiver.ipAddress!
         self.receiver = receiver
     }
@@ -444,7 +444,7 @@ class DenonController {
     
     func setVolume(volumeBetween0and1: Float, _ completionBlock: CommandDoubleResponseBlock = nil) {
         // translate 0...1 to minimumVolume...maxAllowedSafeVolume
-        let volume = (Double(volumeBetween0and1) * ((maxAllowedSafeVolume ?? volumeMax) - minimumVolume)) + minimumVolume
+        let volume = (Double(volumeBetween0and1) * (maxAllowedSafeVolume - minimumVolume)) + minimumVolume
         self.setVolume(volume, completionBlock)
     }
     
