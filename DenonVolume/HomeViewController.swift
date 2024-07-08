@@ -87,7 +87,8 @@ class HomeViewController: UIViewController {
     
     @IBOutlet var buttons: [UIButton]!
     @IBOutlet weak var muteButton: UIButton!
-    @IBOutlet var panGesture: UIPanGestureRecognizer!
+    @IBOutlet var mainPanGesture: UIPanGestureRecognizer!
+    @IBOutlet var z2PanGesture: UIPanGestureRecognizer!
     @IBOutlet var tapGesture: UITapGestureRecognizer!
     @IBOutlet var longPressGesture: UILongPressGestureRecognizer!
     
@@ -130,7 +131,8 @@ class HomeViewController: UIViewController {
         }
         
         self.debugLabel.text = ""
-        self.panGesture.delegate = self
+        self.mainPanGesture.delegate = self
+        self.z2PanGesture.delegate = self
         self.tapGesture.delegate = self
         self.longPressGesture.delegate = self
         self.volumeForegroundView.clipsToBounds = true
@@ -482,6 +484,7 @@ class HomeViewController: UIViewController {
         }
     }
     
+    // DOUBLE TAP TO MUTE
     @IBAction func handleTap(_ sender: UITapGestureRecognizer) {
         self.muteButtonPressed(sender)
     }
@@ -501,12 +504,14 @@ class HomeViewController: UIViewController {
     
     // TODO: update for Z2
     // does not have ended state
-    @IBAction func handlePan(_ gesture: UIPanGestureRecognizer) {
+    @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
+        let isZone2 = gesture == self.z2PanGesture
         if self.panBeginning {
             self.panBeginning = false
             self.denon?.readVolume { (err) in
                 if let err = err { DLog("HVC readVolume ERROR: \(err)") }
-                if let vol = self.denon?.lastVolume {
+                let volBool = isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume
+                if let vol = volBool {
                     DLog("HVC handlePan beginning readVolume = \(vol)")
                     self.volumeAtStartOfPan = vol
                 }
@@ -515,7 +520,8 @@ class HomeViewController: UIViewController {
         guard let volume = self.volumeAtStartOfPan else { return }
 
         let coords = gesture.translation(in: nil)
-        var heightRange = self.volumeBackgroundView.bounds.height
+        let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+        var heightRange = bgView!.bounds.height
         if self.panSlowly {
             heightRange *= self.panSlowlyMultiplier
         }
@@ -535,14 +541,11 @@ class HomeViewController: UIViewController {
         result = result.round(nearest: 0.5)
 
         if self.volumeLastDesiredInPan == result {
-//            DLog("percentOfFullVolumeRange = \(percentOfFullVolumeRange * 100), resultInt = \(resultInt), no-op")
             return
         }
         self.volumeLastDesiredInPan = result
-//        DLog("percentOfFullVolumeRange = \(percentOfFullVolumeRange * 100), resultInt = \(resultInt), setting")
 
-        // TODO: HANDLE ZONE2 GESTURE TOO
-        self.denon?.setVolume(result, isZone2: false) { (v, err) in
+        self.denon?.setVolume(result, isZone2: isZone2) { (v, err) in
             if let err = err {
                 if self.denon?.verbose ?? false { DLog("pan setVolume, ERROR: \(err)") }
             }
@@ -553,7 +556,7 @@ class HomeViewController: UIViewController {
                 self.selectionFeedback?.selectionChanged()
             }
             self.volumeLastSetInPan = v
-            self.updateVolume(v, isZone2: self.zone == 2)
+            self.updateVolume(v, isZone2: isZone2)
         }
     }
     
@@ -592,7 +595,7 @@ extension HomeViewController : UIGestureRecognizerDelegate {
             return false
         }
         
-        if gestureRecognizer === self.panGesture {
+        if gestureRecognizer === self.mainPanGesture || gestureRecognizer == self.z2PanGesture {
             panBeginning = true
             volumeAtStartOfPan = nil
             self.impactFeedbackHeavy.prepare()
@@ -602,10 +605,10 @@ extension HomeViewController : UIGestureRecognizerDelegate {
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer == self.panGesture && otherGestureRecognizer == self.longPressGesture {
+        if (gestureRecognizer == self.mainPanGesture || gestureRecognizer == self.z2PanGesture) && otherGestureRecognizer == self.longPressGesture {
             return true
         }
-        if otherGestureRecognizer == self.panGesture && gestureRecognizer == self.longPressGesture {
+        if (otherGestureRecognizer == self.mainPanGesture || gestureRecognizer == self.z2PanGesture) && gestureRecognizer == self.longPressGesture {
             return true
         }
         return false
