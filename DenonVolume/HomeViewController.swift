@@ -502,7 +502,6 @@ class HomeViewController: UIViewController {
         }
     }
     
-    // TODO: update for Z2
     // does not have ended state
     @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let isZone2 = gesture == self.z2PanGesture
@@ -538,7 +537,7 @@ class HomeViewController: UIViewController {
         }
         result = min(result, self.denon?.maxAllowedSafeVolume ?? self.denon?.volumeMax ?? 98)
         result = max(result, 0) // self.minimumVolume)
-        result = result.round(nearest: 0.5)
+        result = result.round(nearest: isZone2 ? 1 : 0.5) // zone 2 cannot due half DBs like 33.5
 
         if self.volumeLastDesiredInPan == result {
             return

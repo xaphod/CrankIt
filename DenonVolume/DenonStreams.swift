@@ -79,6 +79,9 @@ class DenonStreams {
             var received: String?
             if let data = data, let str = String.init(data: data, encoding: .ascii) {
                 received = str
+                if self.dc?.verbose == true {
+                    DLog("received, has waiter=\(self.receiveWaiter != nil): \(received)")
+                }
             }
             let waiter = self.receiveWaiter
             self.receiveWaiter = nil
@@ -160,15 +163,6 @@ class DenonStreams {
                 }
             }
 
-            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
-                guard let self = self else { return }
-                guard self.lastOpMillis == millis else { return }
-                DLog("DenonStreams readLine TIMEOUT")
-                self.lock.unlock()
-                self.receiveWaiter = nil
-                DispatchQueue.main.async { timeoutBlock?() }
-            }
-
             if self.connection.state != .ready {
                 self.lock.unlock()
                 DispatchQueue.main.async {
@@ -177,6 +171,15 @@ class DenonStreams {
                 return
             }
             
+            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
+                guard let self = self else { return }
+                guard self.lastOpMillis == millis else { return }
+                DLog("DenonStreams readLine TIMEOUT, regex = \(responseLineRegex)")
+                self.lock.unlock()
+                self.receiveWaiter = nil
+                DispatchQueue.main.async { timeoutBlock?() }
+            }
+
             assert(self.receiveWaiter == nil)
             self.receiveWaiter = { [weak self] (received) in
                 guard let self = self else { return }

@@ -469,21 +469,14 @@ class DenonController {
             return
         }
         
-        let work = {
-            self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
-                completionBlock?(.tryAgain)
-            }) { (str, err) in
-                guard let _ = str else {
-                    completionBlock?(err ?? CommandError.noDataReturned)
-                    return
-                }
-                completionBlock?(nil)
+        self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
+            completionBlock?(.tryAgain)
+        }) { (str, err) in
+            guard let _ = str else {
+                completionBlock?(err ?? CommandError.noDataReturned)
+                return
             }
-        }
-        self.issueCommand("Z2?", minLength: 4, responseLineRegex: nil, timeoutBlock: {
-            work()
-        }) { (_, _) in
-            work()
+            completionBlock?(nil)
         }
     }
     
@@ -523,14 +516,14 @@ class DenonController {
         }
         
         let val: String
-        if floor(volumeDouble) == volumeDouble {
+        if isZone2 || floor(volumeDouble) == volumeDouble {
             val = String(format: "%02d", Int(volumeDouble))
         } else {
             // we assume val is xx.5
             val = String(format: "%02d5", Int(volumeDouble))
         }
 
-        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: #"(?:Z2|MV)(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: isZone2 ? #"Z2(?!ON)[0-9]{2,3}.*"# : #"MV(?!MAX).*"#, timeoutBlock: {
             completionBlock?(nil, .tryAgain) // don't report old values here since changing so fast
         }) { (str, err) in
             DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil") for zone \(isZone2 ? "2" : "1")")
@@ -613,9 +606,9 @@ class DenonController {
     // handle side-effects of parsing output that wasn't asked for
     // NOT ON MAIN THREAD
     func parseResponseHelper(line: String.SubSequence) -> Bool {
-        if self.verbose {
-            DLog("parseResponseHelper: \(line)")
-        }
+//        if self.verbose {
+//            DLog("parseResponseHelper: \(line)")
+//        }
         
         if line.hasPrefix("Z2") {
             // Zone 2 things we handle here:
