@@ -530,7 +530,7 @@ class DenonController {
             val = String(format: "%02d5", Int(volumeDouble))
         }
 
-        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: #"(Z2|MV)(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: #"(?:Z2|MV)(?!MAX).*"#, timeoutBlock: {
             completionBlock?(nil, .tryAgain) // don't report old values here since changing so fast
         }) { (str, err) in
             DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil") for zone \(isZone2 ? "2" : "1")")
@@ -590,8 +590,8 @@ class DenonController {
             return nil
         }
         // Range: 00, 005 .... 10, 105, ... 98 (max)
-
-        let regex = try? NSRegularExpression(pattern: #"MV(?:MAX){0,1} ?([0-9]{2,3}).*"#, options: [])
+        
+        let regex = try? NSRegularExpression(pattern: #"(?:Z2|MV)(?:MAX){0,1} ?([0-9]{2,3}).*"#, options: [])
         let nsrange = NSRange(str.startIndex..<str.endIndex, in: str)
         var dbl: Double?
         regex?.enumerateMatches(in: str, options: [], range: nsrange) { (match, _, stop) in
@@ -605,7 +605,8 @@ class DenonController {
                 stop.pointee = true
             }
         }
-        if self.verbose { DLog("DC volumeFromString: \(str) -> \(dbl ?? -1)") }
+        if self.verbose { DLog("DC volumeFromString: \(str) -> \(dbl ?? -999)") }
+        
         return dbl
     }
     

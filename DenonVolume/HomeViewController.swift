@@ -96,6 +96,8 @@ class HomeViewController: UIViewController {
 
     @IBOutlet weak var z2BackgroundView: UIView!
     @IBOutlet weak var z2ForegroundView: UIView!
+    var z2VolumeHeightConstraint: NSLayoutConstraint?
+    @IBOutlet weak var z2VolumeLabel: UILabel!
 
     @IBOutlet weak var buttonsStackview: UIStackView!
     @IBOutlet weak var surroundModeLabel: UILabel!
@@ -155,6 +157,7 @@ class HomeViewController: UIViewController {
             self.settingsButton.setTitle(nil, for: .normal)
             self.debugLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            self.z2VolumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.surroundModeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
             self.volButtonLow.setTitle(nil, for: .normal)
@@ -166,11 +169,13 @@ class HomeViewController: UIViewController {
         } else {
             self.surroundModeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+            self.z2VolumeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.debugLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
         }
         self.surroundModeLabel.text = self.denon?.lastSurroundMode ?? "__"
         self.volumeLabel.text = "__ dB"
+        self.z2VolumeLabel.text = "__ dB"
         self.sourcesButton.setTitle("__", for: .normal)
         self.setColors()
         self.limitButton.alpha = 0
@@ -400,36 +405,47 @@ class HomeViewController: UIViewController {
         }
     }
         
-    // TODO: use isZone2
     func updateVolume(_ volume: Double?, isZone2: Bool) {
-        let isMuted = self.denon?.lastMute
+        let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
         self.view.layoutIfNeeded()
         assert(Thread.current.isMainThread)
-        if self.denon?.verbose ?? false { DLog("HVC updateVolume: \(String(describing: volume)), isMuted=\(String(describing: isMuted))") }
+        if self.denon?.verbose ?? false { DLog("HVC updateVolume: \(String(describing: volume)), isMuted=\(String(describing: isMuted)), isZone2=\(isZone2)") }
+        let volumeLabel = isZone2 ? self.z2VolumeLabel : self.volumeLabel
         if isMuted == true {
-            self.volumeLabel.text = "Muted"
+            volumeLabel?.text = "Muted"
         }
-            
-        guard let volume = volume else { return }
+        let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+        if powerBool == false {
+            volumeLabel?.text = "OFF"
+        }
+        
+        guard let volume = volume ?? (isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume) else { return }
         if isMuted != true {
-            self.volumeLabel.text = self.volumeToString(vol: volume)
+            volumeLabel?.text = self.volumeToString(vol: volume)
         }
-        let bgHeight = self.volumeBackgroundView.bounds.height
+        let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+        let bgHeight = bgView!.bounds.height
         let fgHeight: CGFloat
         if volume <= self.minimumVolume {
             fgHeight = 0
         } else {
             fgHeight = CGFloat((volume - self.minimumVolume) / ((self.denon?.volumeMax ?? 98) - self.minimumVolume)) * bgHeight
         }
-        self.volumeHeightConstraint?.isActive = false
-        let newConstraint = self.volumeForegroundView.heightAnchor.constraint(equalToConstant: fgHeight)
+        let constraint = isZone2 ? self.z2VolumeHeightConstraint : self.volumeHeightConstraint
+        constraint?.isActive = false
+        let fgView = isZone2 ? self.z2ForegroundView : self.volumeForegroundView
+        let newConstraint = fgView!.heightAnchor.constraint(equalToConstant: fgHeight)
         newConstraint.isActive = true
-        self.volumeHeightConstraint = newConstraint
-        self.volumeForegroundView.setNeedsLayout()
+        if isZone2 {
+            self.z2VolumeHeightConstraint = newConstraint
+        } else {
+            self.volumeHeightConstraint = newConstraint
+        }
+        fgView!.setNeedsLayout()
         UIView.animate(withDuration: 0.1) {
             self.view.layoutIfNeeded()
-            self.limitLineView.alpha = self.volumeIsMax(volume) ? 1.0 : 0
-            self.limitButton.alpha = self.volumeIsMax(volume) ? 1.0 : 0
+            self.limitLineView.alpha = self.volumeIsMax(volume) && !isZone2 ? 1.0 : 0
+            self.limitButton.alpha = self.volumeIsMax(volume) && !isZone2 ? 1.0 : 0
         }
     }
     
