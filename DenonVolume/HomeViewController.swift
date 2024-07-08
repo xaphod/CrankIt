@@ -444,8 +444,10 @@ class HomeViewController: UIViewController {
         fgView!.setNeedsLayout()
         UIView.animate(withDuration: 0.1) {
             self.view.layoutIfNeeded()
-            self.limitLineView.alpha = self.volumeIsMax(volume) && !isZone2 ? 1.0 : 0
-            self.limitButton.alpha = self.volumeIsMax(volume) && !isZone2 ? 1.0 : 0
+            if !isZone2 {
+                self.limitLineView.alpha = self.volumeIsMax(volume) ? 1.0 : 0
+                self.limitButton.alpha = self.volumeIsMax(volume) ? 1.0 : 0
+            }
         }
     }
     
