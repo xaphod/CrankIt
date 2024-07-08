@@ -174,8 +174,8 @@ class HomeViewController: UIViewController {
             self.powerCoverView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
         }
         self.surroundModeLabel.text = self.denon?.lastSurroundMode ?? "__"
-        self.volumeLabel.text = "__ dB"
-        self.z2VolumeLabel.text = "__ dB"
+        self.volumeLabel.text = "__"
+        self.z2VolumeLabel.text = "__"
         self.sourcesButton.setTitle("__", for: .normal)
         self.setColors()
         self.limitButton.alpha = 0
@@ -406,22 +406,23 @@ class HomeViewController: UIViewController {
     }
         
     func updateVolume(_ volume: Double?, isZone2: Bool) {
+        let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
         let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
         self.view.layoutIfNeeded()
         assert(Thread.current.isMainThread)
         if self.denon?.verbose ?? false { DLog("HVC updateVolume: \(String(describing: volume)), isMuted=\(String(describing: isMuted)), isZone2=\(isZone2)") }
         let volumeLabel = isZone2 ? self.z2VolumeLabel : self.volumeLabel
         if isMuted == true {
-            volumeLabel?.text = "Muted"
+            volumeLabel?.text = zoneText + "Muted"
         }
         let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
         if powerBool == false {
-            volumeLabel?.text = "OFF"
+            volumeLabel?.text = zoneText + "OFF"
         }
         
         guard let volume = volume ?? (isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume) else { return }
         if isMuted != true {
-            volumeLabel?.text = self.volumeToString(vol: volume)
+            volumeLabel?.text = zoneText + self.volumeToString(vol: volume)
         }
         let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
         let bgHeight = bgView!.bounds.height
