@@ -486,7 +486,7 @@
                 </panGestureRecognizer>
                 <tapGestureRecognizer numberOfTapsRequired="2" id="vsl-tE-OcK">
                     <connections>
-                        <action selector="handleTap:" destination="Mxy-Vh-eFF" id="diZ-wg-uUA"/>
+                        <action selector="handleDoubleTap:" destination="Mxy-Vh-eFF" id="diZ-wg-uUA"/>
                     </connections>
                 </tapGestureRecognizer>
                 <pongPressGestureRecognizer allowableMovement="10" minimumPressDuration="0.5" id="Pmc-t8-AK6">

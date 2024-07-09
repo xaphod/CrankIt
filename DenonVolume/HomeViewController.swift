@@ -529,7 +529,7 @@ class HomeViewController: UIViewController {
     }
     
     // DOUBLE TAP TO MUTE
-    @IBAction func handleTap(_ sender: UITapGestureRecognizer) {
+    @IBAction func handleDoubleTap(_ sender: UITapGestureRecognizer) {
         self.muteButtonPressed(sender)
     }
     
