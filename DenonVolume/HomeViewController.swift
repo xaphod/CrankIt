@@ -27,11 +27,12 @@ class HomeViewController: UIViewController {
         }
     }
 
-    // TODO: update for Z2
     var panSlowly = false {
         didSet {
-            self.volumeBackgroundView.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
-            self.volumeForegroundView.backgroundColor = panSlowly ? Colors.yellow : Colors.reverseTint
+            let bgView = self.zone == 2 ? self.z2BackgroundView : self.volumeBackgroundView
+            let fgView = self.zone == 2 ? self.z2ForegroundView : self.volumeForegroundView
+            bgView!.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
+            fgView!.backgroundColor = panSlowly ? Colors.yellow : Colors.reverseTint
         }
     }
     var panBeginning = false
