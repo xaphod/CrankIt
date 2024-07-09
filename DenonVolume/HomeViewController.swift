@@ -533,7 +533,17 @@ class HomeViewController: UIViewController {
     @IBAction func handleDoubleTap(_ sender: UITapGestureRecognizer) {
         self.muteButtonPressed(sender)
     }
-    
+
+    @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
+        self.zoneSegment.selectedSegmentIndex = 0
+        self.zone = 1
+    }
+
+    @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
+        self.zoneSegment.selectedSegmentIndex = 1
+        self.zone = 2
+    }
+
     // does have ended state
     @IBAction func handleLongPress(_ sender: UILongPressGestureRecognizer) {
         switch sender.state {

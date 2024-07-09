@@ -246,6 +246,7 @@
                                     </view>
                                 </subviews>
                                 <color key="backgroundColor" systemColor="systemPurpleColor"/>
+                                <gestureRecognizers/>
                                 <constraints>
                                     <constraint firstAttribute="bottom" secondItem="WCd-83-zmz" secondAttribute="bottom" id="DEB-yY-IdW"/>
                                     <constraint firstAttribute="width" constant="60" id="NsI-pI-oD8"/>
@@ -254,6 +255,7 @@
                                 </constraints>
                                 <connections>
                                     <outletCollection property="gestureRecognizers" destination="5Nw-XL-9wx" appends="YES" id="Jop-uA-8Hj"/>
+                                    <outletCollection property="gestureRecognizers" destination="tdx-G9-Xda" appends="YES" id="mAz-CH-2W8"/>
                                 </connections>
                             </view>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" verticalCompressionResistancePriority="1000" ambiguous="YES" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="3xq-uQ-2hQ" userLabel="Secondary Volume label">
@@ -271,11 +273,15 @@
                                     </view>
                                 </subviews>
                                 <color key="backgroundColor" systemColor="systemPurpleColor"/>
+                                <gestureRecognizers/>
                                 <constraints>
                                     <constraint firstItem="DCa-9J-ebb" firstAttribute="leading" secondItem="7Td-WW-0hE" secondAttribute="leading" id="8Xl-Qo-FfH"/>
                                     <constraint firstAttribute="trailing" secondItem="DCa-9J-ebb" secondAttribute="trailing" id="AVA-v0-4wN"/>
                                     <constraint firstAttribute="bottom" secondItem="DCa-9J-ebb" secondAttribute="bottom" id="jO3-BJ-rxs"/>
                                 </constraints>
+                                <connections>
+                                    <outletCollection property="gestureRecognizers" destination="940-cG-zUS" appends="YES" id="Wvy-Ha-myi"/>
+                                </connections>
                             </view>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" verticalCompressionResistancePriority="1000" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="QQd-cp-MAq">
                                 <rect key="frame" x="139" y="38" width="42" height="20"/>
@@ -350,7 +356,7 @@
                                 <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
                                 <subviews>
                                     <stackView opaque="NO" contentMode="scaleToFill" ambiguous="YES" axis="vertical" distribution="equalCentering" alignment="top" spacing="20" translatesAutoresizingMaskIntoConstraints="NO" id="OGL-Uw-gMx">
-                                        <rect key="frame" x="28" y="389" width="179" height="151.5"/>
+                                        <rect key="frame" x="28" y="389" width="179" height="151"/>
                                         <subviews>
                                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Connecting..." textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="RtH-cB-z2r">
                                                 <rect key="frame" x="0.0" y="0.0" width="102" height="20.5"/>
@@ -359,7 +365,7 @@
                                                 <nil key="highlightedColor"/>
                                             </label>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Erw-Oa-ctM">
-                                                <rect key="frame" x="0.0" y="52.5" width="96.5" height="35"/>
+                                                <rect key="frame" x="0.0" y="52" width="96.5" height="35"/>
                                                 <fontDescription key="fontDescription" type="system" pointSize="15"/>
                                                 <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 <inset key="contentEdgeInsets" minX="8" minY="8" maxX="0.0" maxY="8"/>
@@ -370,7 +376,7 @@
                                                 </connections>
                                             </button>
                                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="zvw-1P-s4G">
-                                                <rect key="frame" x="0.0" y="107.5" width="179" height="44"/>
+                                                <rect key="frame" x="0.0" y="107" width="179" height="44"/>
                                                 <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 <inset key="contentEdgeInsets" minX="8" minY="8" maxX="0.0" maxY="8"/>
                                                 <inset key="imageEdgeInsets" minX="-8" minY="0.0" maxX="0.0" maxY="0.0"/>
@@ -484,7 +490,7 @@
                         <action selector="handlePanGesture:" destination="Mxy-Vh-eFF" id="826-vx-TCl"/>
                     </connections>
                 </panGestureRecognizer>
-                <tapGestureRecognizer numberOfTapsRequired="2" id="vsl-tE-OcK">
+                <tapGestureRecognizer numberOfTapsRequired="2" id="vsl-tE-OcK" userLabel="Double Tap Gesture Recognizer">
                     <connections>
                         <action selector="handleDoubleTap:" destination="Mxy-Vh-eFF" id="diZ-wg-uUA"/>
                     </connections>
@@ -499,6 +505,16 @@
                         <action selector="handlePanGesture:" destination="Mxy-Vh-eFF" id="QtU-Ew-WbY"/>
                     </connections>
                 </panGestureRecognizer>
+                <tapGestureRecognizer id="tdx-G9-Xda">
+                    <connections>
+                        <action selector="handleZ2BGTap:" destination="Mxy-Vh-eFF" id="Sgy-YU-cb1"/>
+                    </connections>
+                </tapGestureRecognizer>
+                <tapGestureRecognizer id="940-cG-zUS">
+                    <connections>
+                        <action selector="handleZ1BGTap:" destination="Mxy-Vh-eFF" id="D5D-XU-LDl"/>
+                    </connections>
+                </tapGestureRecognizer>
             </objects>
             <point key="canvasLocation" x="-177" y="767"/>
         </scene>
