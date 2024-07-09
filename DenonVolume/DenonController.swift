@@ -655,7 +655,7 @@ class DenonController {
 
             if let newSource = InputSourceSetting.init(str: String(line)) {
                 DispatchQueue.main.async {
-                    self.zone2Source = newSource
+                    self.zone2Source = newSource // has didSet
                 }
                 return true
             }
@@ -670,7 +670,7 @@ class DenonController {
                     } else {
                         assert(false)
                     }
-                    self.hvc?.updateMuteState(muteState: self.lastMute, isZone2: true)
+                    self.hvc?.updateMuteState(muteState: self.zone2Mute, isZone2: true)
                 }
                 return true
             }
@@ -706,7 +706,7 @@ class DenonController {
                     source.code = String(line)
                     source.displayLong = String(line.suffix(from: index))
                     source.displayShort = String(line.suffix(from: index).prefix(4))
-                    self.lastSource = source
+                    self.lastSource = source // has didSet
                     DLog("DC readSourceState: unknown source \(line)")
                 }
             }
