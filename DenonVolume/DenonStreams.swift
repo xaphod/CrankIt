@@ -15,7 +15,7 @@ class DenonStreams {
     let queue: DispatchQueue
     let lock = NSLock.init()
     private var unprocessedReceived = ""
-    private let TIMEOUT_TIME: TimeInterval = 2
+    static let TIMEOUT_TIME: TimeInterval = 2
     var lastOpMillis: Double = 0
     
     fileprivate var receiveWaiter: ((String?)->Void)?
@@ -113,7 +113,7 @@ class DenonStreams {
 
             let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
             self.lastOpMillis = millis
-            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
+            self.queue.asyncAfter(deadline: .now() + Self.TIMEOUT_TIME) { [weak self] in
                 guard let self = self else { return }
                 guard self.lastOpMillis == millis else { return }
                 DLog("DenonStreams write TIMEOUT")
@@ -141,7 +141,7 @@ class DenonStreams {
 
     // reads until it gets a line that starts with responseLineRegex -- then reads til the end of that line.
     // can be the same line as the command (ie. 0 \r)
-    func readLine(minLength: Int, responseLineRegex: String?, hasLock: Bool = false, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?)->Void) {
+    func readLine(minLength: Int, responseLineRegex: String?, hasLock: Bool = false, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?)->Void) {
         self.queue.async {
             if !hasLock {
                 guard self.lock.try() else {
@@ -171,7 +171,7 @@ class DenonStreams {
                 return
             }
             
-            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
+            self.queue.asyncAfter(deadline: .now() + timeoutTime) { [weak self] in
                 guard let self = self else { return }
                 guard self.lastOpMillis == millis else { return }
                 DLog("DenonStreams readLine TIMEOUT, regex = \(responseLineRegex)")

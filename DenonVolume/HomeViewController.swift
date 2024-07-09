@@ -17,6 +17,8 @@ class HomeViewController: UIViewController {
         }
         set {
             AppDelegate.shared.denon = newValue
+            
+            // TODO: impl
         }
     }
 
@@ -104,7 +106,7 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var surroundModeLabel: UILabel!
     @IBOutlet weak var volumeLabel: UILabel!
     @IBOutlet weak var volButtonHigh: UIButton!
-    @IBOutlet weak var volButtonMed: UIButton!
+    @IBOutlet weak var volButtonMed: UIButton?
     @IBOutlet weak var volButtonLow: UIButton!
     @IBOutlet weak var powerButton: UIButton!
     @IBOutlet weak var powerCoverView: UIView!
@@ -117,17 +119,21 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var sourcesButton: UIButton!
     @IBOutlet weak var settingsButton: UIButton!
     @IBOutlet weak var multiEqButton: UIButton!
+    @IBOutlet weak var zoneSegment: UISegmentedControl!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         DLog("UIScreen.main height = \(UIScreen.main.bounds.height)")
-        if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
-            self.buttonsStackview.spacing = 20
-            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
-        }
         if UIScreen.main.bounds.height < 665 { // iPhone SE1 / iphone 5S: 568
             self.buttonsStackview.spacing = 10
+            self.volButtonMed?.removeFromSuperview()
             self.buttonsStackviewCenterYConstraint.constant = 23 // shift downwards
+        } else if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
+            self.buttonsStackview.spacing = 20
+            self.volButtonMed?.removeFromSuperview()
+            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
+        } else {
+            self.buttonsStackviewCenterYConstraint.constant = 26 // shift downwards
         }
         
         self.debugLabel.text = ""
@@ -164,8 +170,8 @@ class HomeViewController: UIViewController {
             self.powerCoverView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
             self.volButtonLow.setTitle(nil, for: .normal)
             self.volButtonLow.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
-            self.volButtonMed.setTitle(nil, for: .normal)
-            self.volButtonMed.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
+            self.volButtonMed?.setTitle(nil, for: .normal)
+            self.volButtonMed?.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
             self.volButtonHigh.setTitle(nil, for: .normal)
             self.volButtonHigh.setImage(UIImage.init(systemName: "speaker.3.fill"), for: .normal)
         } else {
@@ -242,7 +248,7 @@ class HomeViewController: UIViewController {
             self.updateVolume(initialState.volume, isZone2: self.zone == 2)
             self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source)
-            self.powerCoverView.isHidden = initialState.poweredOn
+            self.powerCoverView.isHidden = initialState.poweredOn // TODO: what happens when z2 powered on, z1 off? what do we want?
         }
     }
     
@@ -277,7 +283,7 @@ class HomeViewController: UIViewController {
         self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.z2ForegroundView.backgroundColor = Colors.reverseTint
         self.volButtonLow.backgroundColor = Colors.green
-        self.volButtonMed.backgroundColor = Colors.yellow
+        self.volButtonMed?.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
     }
     
@@ -367,7 +373,7 @@ class HomeViewController: UIViewController {
         guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
 
-        dc.togglePowerState { (initialState) in
+        dc.togglePowerState(isZone2: self.zone == 2) { (initialState) in
             guard let initialState = initialState else {
                 self.buttons.forEach { $0.isEnabled = true }
                 self.showTryAgainAlert()
@@ -383,7 +389,7 @@ class HomeViewController: UIViewController {
                 self.updateMuteState(muteState: muted, isZone2: true)
             }
             self.updateSource(source: initialState.source)
-            let anyHasPower = initialState.poweredOn || dc.zone2Power == true
+            let anyHasPower = dc.lastPower == true || dc.zone2Power == true
             self.powerCoverView.isHidden = anyHasPower
 
             self.buttons.forEach { $0.isEnabled = true }
@@ -429,6 +435,7 @@ class HomeViewController: UIViewController {
     }
         
     func updateVolume(_ volume: Double?, isZone2: Bool) {
+        DLog("*** updateVolume()")
         let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
         let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
         self.view.layoutIfNeeded()
@@ -504,6 +511,14 @@ class HomeViewController: UIViewController {
         }
         self.denon?.readMuteState() { [weak self] (error) in
             work(isZone2 ? self?.denon?.zone2Mute : self?.denon?.lastMute, error)
+        }
+    }
+    
+    @IBAction func zoneSegmentChanged(_ sender: UISegmentedControl) {
+        if sender.selectedSegmentIndex == 0 {
+            self.zone = 1
+        } else if sender.selectedSegmentIndex == 1 {
+            self.zone = 2
         }
     }
     

@@ -84,7 +84,11 @@ class DenonController {
     var canReconnect = true
     private let queue = DispatchQueue.init(label: "com.solodigitalis.denonVolume")
     
-    var zone2Power: Bool?
+    var zone2Power: Bool? {
+        didSet {
+            DLog("*** zone2Power -> \(zone2Power)")
+        }
+    }
     var zone2Volume: Double?
     var zone2Source: InputSourceSetting?
     var zone2Mute: Bool?
@@ -351,55 +355,51 @@ class DenonController {
         }
     }
     
-    func togglePowerState(_ completionBlock: ConnectCompletionBlock = nil) {
+    func togglePowerState(isZone2: Bool, _ completionBlock: ConnectCompletionBlock = nil) {
         guard !self.demoMode else {
             self.lastPower = !(self.lastPower!)
             completionBlock?(nil)
             return
         }
 
-        guard let powerState = self.lastPower else {
+        guard let z1PowerState = self.lastPower, let z2PowerState = self.zone2Power else {
             self.readPowerAndZ2State()
             completionBlock?(nil)
             return
         }
-        if powerState {
-            let work = {
-                self.issueCommand("PWSTANDBY", minLength: 4, responseLineRegex: "PWSTANDBY.*", timeoutBlock: {
-                    completionBlock?(nil)
-                }) { (str, error) in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
-                        guard let self = self else { return }
-                        self.lastPower = !powerState
-                        completionBlock?(InitialState.init(poweredOn: !powerState, isMuted: nil, volume: nil))
-                    }
-                }
-            }
+        let powerState = isZone2 ? z2PowerState : z1PowerState
 
-            // TODO: update for z2
-            self.issueCommand("Z2?", minLength: 4, responseLineRegex: #"(Z2ON)||(Z2OFF)"#, timeoutBlock: {
-                work()
-            }) { (str, _) in
-                if let str = str, str.hasPrefix("Z2ON") {
-                    self.issueCommand("Z2OFF", minLength: 4, responseLineRegex: nil, timeoutBlock: {
-                        work()
-                    }) { (_, _) in
-                        work()
+        // Turning OFF
+        if powerState {
+            self.issueCommand(isZone2 ? "Z2OFF" : "PWSTANDBY", minLength: 4, responseLineRegex: isZone2 ? #"Z2OFF.*"# :  #"PWSTANDBY.*"#, timeoutBlock: {
+                completionBlock?(nil)
+            }) { (str, error) in
+                DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
+                    guard let self = self else { return }
+                    if isZone2 {
+                        self.zone2Power = !powerState
+                    } else {
+                        self.lastPower = !powerState
                     }
-                    return
+                    completionBlock?(InitialState.init(poweredOn: !powerState, isMuted: nil, volume: nil))
                 }
-                work()
             }
             return
         }
-        self.issueCommand("PWON", minLength: 4, responseLineRegex: "PWON.*", timeoutBlock: {
+
+        // Turning ON
+        self.issueCommand(isZone2 ? "Z2ON" : "PWON", minLength: 4, responseLineRegex: isZone2 ? #"Z2ON.*"# : #"PWON.*"#, timeoutTime: 3.9, timeoutBlock: {
             completionBlock?(nil)
         }) { (str, error) in
             guard let _ = str else {
                 completionBlock?(nil)
                 return
             }
-            self.lastPower = !powerState
+            if isZone2 {
+                self.zone2Power = !powerState
+            } else {
+                self.lastPower = !powerState
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
                 self?.getInitialState(powerState: !powerState, completionBlock)
             }
@@ -545,7 +545,7 @@ class DenonController {
         }
     }
     
-    func issueCommand(_ command: String, minLength: Int, responseLineRegex: String?, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
+    func issueCommand(_ command: String, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
         guard !self.demoMode else {
             completionBlock?(responseLineRegex, nil)
             return
@@ -564,7 +564,7 @@ class DenonController {
                 completionBlock?(nil, .streamError(error))
                 return
             }
-            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutBlock: timeoutBlock) { (str) in
+            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock) { (str) in
                 if let str = str {
                     if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
                     completionBlock?(str, nil)
