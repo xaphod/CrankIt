@@ -381,6 +381,17 @@ class HomeViewController: UIViewController {
         }
     }
     
+    func powerStateDidUpdate() {
+        guard let dc = self.denon else { return }
+        self.updateVolume(dc.lastVolume, isZone2: false)
+        self.updateVolume(dc.zone2Volume, isZone2: true)
+        self.updateMuteState(muteState: dc.lastMute, isZone2: false)
+        self.updateMuteState(muteState: dc.zone2Mute, isZone2: true)
+        self.updateSource(source: self.zone == 2 ? dc.zone2Source : dc.lastSource)
+        let anyHasPower = dc.lastPower == true || dc.zone2Power == true
+        self.powerCoverView.isHidden = anyHasPower
+    }
+    
     @IBAction func limitButtonPressed(_ sender: Any) {
         self.changeVolumeLimit()
     }

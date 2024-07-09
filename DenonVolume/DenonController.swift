@@ -610,6 +610,23 @@ class DenonController {
 //            DLog("parseResponseHelper: \(line)")
 //        }
         
+        // new: handle power state changes
+        if line.hasPrefix("PWSTANDBY") {
+            DispatchQueue.main.async {
+                self.lastPower = false
+                self.zone2Power = false
+                self.hvc?.powerStateDidUpdate()
+            }
+            return true
+        }
+        if line.hasPrefix("PWON") {
+            DispatchQueue.main.async {
+                self.lastPower = true
+                self.hvc?.powerStateDidUpdate()
+            }
+            return true
+        }
+        
         if line.hasPrefix("Z2") {
             // Zone 2 things we handle here:
             // Z2ON, Z2OFF (power)
