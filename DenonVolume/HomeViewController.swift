@@ -9,7 +9,14 @@
 import UIKit
 
 class HomeViewController: UIViewController {
-    var zone: Int { get { AppDelegate.shared.zone } set { AppDelegate.shared.zone = newValue } }
+    var zone: Int {
+        get { AppDelegate.shared.zone }
+        set {
+            AppDelegate.shared.zone = newValue
+            self.multiEqButton.isEnabled = newValue == 1
+            self.updateSource(source: newValue == 2 ? self.denon?.zone2Source : self.denon?.lastSource, isZone2: newValue == 2)
+        }
+    }
 
     var denon: DenonController? {
         get {
@@ -17,8 +24,6 @@ class HomeViewController: UIViewController {
         }
         set {
             AppDelegate.shared.denon = newValue
-            
-            // TODO: impl
         }
     }
 
@@ -247,7 +252,7 @@ class HomeViewController: UIViewController {
             }
             self.updateVolume(initialState.volume, isZone2: self.zone == 2)
             self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
-            self.updateSource(source: initialState.source)
+            self.updateSource(source: initialState.source, isZone2: self.zone == 2)
             self.powerCoverView.isHidden = initialState.poweredOn // TODO: what happens when z2 powered on, z1 off? what do we want?
         }
     }
@@ -350,7 +355,7 @@ class HomeViewController: UIViewController {
                         self.showTryAgainAlert()
                         return
                     }
-                    self.updateSource(source: source)
+                    self.updateSource(source: source, isZone2: self.zone == 2)
                 }
             }))
         }
@@ -388,7 +393,7 @@ class HomeViewController: UIViewController {
             if let muted = dc.zone2Mute {
                 self.updateMuteState(muteState: muted, isZone2: true)
             }
-            self.updateSource(source: initialState.source)
+            self.updateSource(source: initialState.source, isZone2: self.zone == 2)
             let anyHasPower = dc.lastPower == true || dc.zone2Power == true
             self.powerCoverView.isHidden = anyHasPower
 
@@ -403,7 +408,7 @@ class HomeViewController: UIViewController {
         self.updateVolume(dc.zone2Volume, isZone2: true)
         self.updateMuteState(muteState: dc.lastMute, isZone2: false)
         self.updateMuteState(muteState: dc.zone2Mute, isZone2: true)
-        self.updateSource(source: self.zone == 2 ? dc.zone2Source : dc.lastSource)
+        self.updateSource(source: self.zone == 2 ? dc.zone2Source : dc.lastSource, isZone2: self.zone == 2)
         let anyHasPower = dc.lastPower == true || dc.zone2Power == true
         self.powerCoverView.isHidden = anyHasPower
     }
@@ -412,8 +417,9 @@ class HomeViewController: UIViewController {
         self.changeVolumeLimit()
     }
     
-    func updateSource(source: InputSourceSetting?) {
+    func updateSource(source: InputSourceSetting?, isZone2: Bool) {
         guard let source = source else { return }
+        if (self.zone == 1 && isZone2) || (self.zone == 2 && !isZone2) { return }
         if source.displayShort.count == 0 {
             self.sourcesButton.setTitle("SRC", for: .normal)
             return

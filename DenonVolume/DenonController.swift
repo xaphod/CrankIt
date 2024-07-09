@@ -66,7 +66,7 @@ class DenonController {
         didSet {
             let str = self.receiver.device.friendlyName ?? self.receiver.device.manufacturer
             AudioController.shared.title = "\(str) - \(self.lastSource?.displayLong ?? "")"
-            self.hvc?.updateSource(source: self.lastSource)
+            self.hvc?.updateSource(source: self.lastSource, isZone2: false)
         }
     }
     var lastSurroundMode: String?
@@ -90,7 +90,11 @@ class DenonController {
         }
     }
     var zone2Volume: Double?
-    var zone2Source: InputSourceSetting?
+    var zone2Source: InputSourceSetting? {
+        didSet {
+            self.hvc?.updateSource(source: self.zone2Source, isZone2: true)
+        }
+    }
     var zone2Mute: Bool?
     
     init(receiver: Receiver) {
