@@ -364,24 +364,34 @@ class HomeViewController: UIViewController {
     }
     
     @IBAction func powerButtonPressed(_ sender: UIButton) {
+        guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
 
-        self.denon?.togglePowerState { (initialState) in
+        dc.togglePowerState { (initialState) in
             guard let initialState = initialState else {
                 self.buttons.forEach { $0.isEnabled = true }
                 self.showTryAgainAlert()
                 return
             }
             self.impactFeedbackHeavy.impactOccurred()
-            self.updateVolume(initialState.volume, isZone2: self.zone == 2)
-            self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
+            self.updateVolume(initialState.volume, isZone2: false)
+            if let vol = dc.zone2Volume {
+                self.updateVolume(vol, isZone2: true)
+            }
+            self.updateMuteState(muteState: initialState.isMuted, isZone2: false)
+            if let muted = dc.zone2Mute {
+                self.updateMuteState(muteState: muted, isZone2: true)
+            }
             self.updateSource(source: initialState.source)
-            self.powerCoverView.isHidden = initialState.poweredOn
+            let anyHasPower = initialState.poweredOn || dc.zone2Power == true
+            self.powerCoverView.isHidden = anyHasPower
+
             self.buttons.forEach { $0.isEnabled = true }
         }
     }
     
     func powerStateDidUpdate() {
+        DLog("powerStateDidUpdate()")
         guard let dc = self.denon else { return }
         self.updateVolume(dc.lastVolume, isZone2: false)
         self.updateVolume(dc.zone2Volume, isZone2: true)
@@ -430,11 +440,12 @@ class HomeViewController: UIViewController {
         }
         let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
         if powerBool == false {
+            // For this case we want show same state of the volume slider as when it is muted; that will happen in updateMuteState()
             volumeLabel?.text = zoneText + "OFF"
         }
         
         guard let volume = volume ?? (isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume) else { return }
-        if isMuted != true {
+        if isMuted != true && powerBool != false {
             volumeLabel?.text = zoneText + self.volumeToString(vol: volume)
         }
         let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
@@ -459,16 +470,13 @@ class HomeViewController: UIViewController {
         UIView.animate(withDuration: 0.1) {
             self.view.layoutIfNeeded()
             if !isZone2 {
-                self.limitLineView.alpha = self.volumeIsMax(volume) ? 1.0 : 0
-                self.limitButton.alpha = self.volumeIsMax(volume) ? 1.0 : 0
+                self.limitLineView.alpha = self.volumeIsMax(volume) && powerBool != false ? 1.0 : 0
+                self.limitButton.alpha = self.volumeIsMax(volume) && powerBool != false ? 1.0 : 0
             }
         }
     }
     
     func updateMuteState(muteState: Bool? = nil, isZone2: Bool) {
-        // only update our state if this is about the zone
-        if (isZone2 && self.zone != 2) || (!isZone2 && self.zone == 2) { return }
-
         let work: (Bool?, Error?)->Void = { (muted, error) in
             let mutedImage: UIImage
             if #available(iOS 13.0, *) {
@@ -482,16 +490,20 @@ class HomeViewController: UIViewController {
                 return
             }
             self.muteButton.setImage(mutedImage, for: .normal)
-            self.volumeForegroundView.backgroundColor = muted ? Colors.darkGray : Colors.reverseTint
-            self.volumeBackgroundView.layer.borderColor = muted ? Colors.darkGray.cgColor : Colors.reverseTint.cgColor
-            self.updateVolume(self.denon?.lastVolume, isZone2: isZone2)
+            
+            let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+            let fgView = isZone2 ? self.z2ForegroundView : self.volumeForegroundView
+            let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+            fgView!.backgroundColor = powerBool == false || muted ? Colors.darkGray : Colors.reverseTint
+            bgView!.layer.borderColor = powerBool == false || muted ? Colors.darkGray.cgColor : Colors.reverseTint.cgColor
+            self.updateVolume(isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume, isZone2: isZone2)
         }
         if let muteState = muteState {
             work(muteState, nil)
             return
         }
         self.denon?.readMuteState() { [weak self] (error) in
-            work(self?.denon?.lastMute, error)
+            work(isZone2 ? self?.denon?.zone2Mute : self?.denon?.lastMute, error)
         }
     }
     
@@ -516,6 +528,11 @@ class HomeViewController: UIViewController {
     // does not have ended state
     @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let isZone2 = gesture == self.z2PanGesture
+        let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+        if powerBool == false {
+            return
+        }
+        
         if self.panBeginning {
             self.panBeginning = false
             self.denon?.readVolume { (err) in

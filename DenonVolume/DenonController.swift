@@ -637,12 +637,14 @@ class DenonController {
             if line.hasPrefix("Z2ON") {
                 DispatchQueue.main.async {
                     self.zone2Power = true
+                    self.hvc?.powerStateDidUpdate()
                 }
                 return true
             }
             if line.hasPrefix("Z2OFF") {
                 DispatchQueue.main.async {
                     self.zone2Power = false
+                    self.hvc?.powerStateDidUpdate()
                 }
                 return true
             }
