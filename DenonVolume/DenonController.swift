@@ -568,26 +568,28 @@ class DenonController {
         }
         
         if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace }))") }
-        streams.write((command+"\r").data(using: .ascii)!, timeoutBlock: timeoutBlock) { (error) in
+        
+        let tBlock = {
+            DLog("DC issueCommand: \(command) TIMED OUT")
+            timeoutBlock()
+        }
+
+        streams.writeAndRead((command+"\r").data(using: .ascii)!, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
             if let error = error {
                 DLog("DC issueCommand: ERROR writing, disconnecting - \(error)")
                 self.disconnect()
                 completionBlock?(nil, .streamError(error))
                 return
             }
-            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: {
-                DLog("DC issueCommand: \(command) TIMED OUT")
-                timeoutBlock()
-            } ) { (str) in
-                if let str = str {
-                    if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
-                    completionBlock?(str, nil)
-                    return
-                }
-                DLog("DC issueCommand: ERROR on readLine, disconnecting")
-                self.disconnect()
-                completionBlock?(nil, .noDataReturned)
+
+            if let str = str {
+                if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
+                completionBlock?(str, nil)
+                return
             }
+            DLog("DC issueCommand: ERROR on readLine, disconnecting")
+            self.disconnect()
+            completionBlock?(nil, .noDataReturned)
         }
     }
 
