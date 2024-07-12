@@ -378,6 +378,10 @@ class HomeViewController: UIViewController {
             self.updateMuteState(muteState: nil, isZone2: self.zone == 2)
         }
     }
+    
+    @IBAction func powerButtonLongPressed(_ sender: UILongPressGestureRecognizer) {
+        self.denon?.setPowerToStandby()
+    }
 
     @IBAction func powerCoverButtonPressed(_ sender: UIButton) {
         self.zone = 1

@@ -366,6 +366,12 @@ class DenonController {
         }
     }
     
+    func setPowerToStandby() {
+        self.issueCommand("PWSTANDBY", minLength: 4, responseLineRegex: #"PWSTANDBY.*"#, timeoutBlock: {
+        }) { (_, _) in
+        }
+    }
+    
     func togglePowerState(isZone2: Bool, _ completionBlock: ConnectCompletionBlock = nil) {
         guard !self.demoMode else {
             self.lastPower = !(self.lastPower!)

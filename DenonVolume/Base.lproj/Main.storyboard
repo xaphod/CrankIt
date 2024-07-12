@@ -222,6 +222,7 @@
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="XNy-fp-xBm">
                                         <rect key="frame" x="0.0" y="601" width="60" height="60"/>
                                         <color key="backgroundColor" systemColor="labelColor"/>
+                                        <gestureRecognizers/>
                                         <constraints>
                                             <constraint firstAttribute="width" constant="60" id="1Vt-re-YXF"/>
                                             <constraint firstAttribute="height" constant="60" id="cSr-bp-5Z4"/>
@@ -233,6 +234,7 @@
                                         </userDefinedRuntimeAttributes>
                                         <connections>
                                             <action selector="powerButtonPressed:" destination="Mxy-Vh-eFF" eventType="touchUpInside" id="xss-he-2DC"/>
+                                            <outletCollection property="gestureRecognizers" destination="V2U-UP-tRv" appends="YES" id="dJI-3J-cCD"/>
                                         </connections>
                                     </button>
                                 </subviews>
@@ -515,6 +517,11 @@
                         <action selector="handleZ1BGTap:" destination="Mxy-Vh-eFF" id="D5D-XU-LDl"/>
                     </connections>
                 </tapGestureRecognizer>
+                <pongPressGestureRecognizer allowableMovement="10" minimumPressDuration="0.5" id="V2U-UP-tRv">
+                    <connections>
+                        <action selector="powerButtonLongPressed:" destination="Mxy-Vh-eFF" id="f7S-Lh-4z2"/>
+                    </connections>
+                </pongPressGestureRecognizer>
             </objects>
             <point key="canvasLocation" x="-177" y="767"/>
         </scene>
