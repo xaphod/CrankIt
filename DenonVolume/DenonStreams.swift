@@ -113,11 +113,15 @@ class DenonStreams {
     }
     private var writeQueue = [QueueItem]()
 
-    func writeAndRead(_ data: Data, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, _ completionBlock: @escaping (String?, Error?)->Void) {
+    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, _ completionBlock: @escaping (String?, Error?)->Void) {
         self.queue.async {
+            let hasLock = self.lock.try()
+            if !hasLock, !canQueue {
+                return // drop it
+            }
             let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, completionBlock: completionBlock)
             self.writeQueue.insert(queueItem, at: 0)
-            if self.lock.try() {
+            if hasLock {
                 let _ = self.writeNext()
             } else {
                 DLog("DenonStreams write: lock busy for \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1))), added to queue. Queue length = \(self.writeQueue.count)")
