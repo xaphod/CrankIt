@@ -171,7 +171,7 @@ class DenonStreams {
                 return
             }
 
-            self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
         }))
         
         return true
@@ -180,7 +180,7 @@ class DenonStreams {
     // PRE: ON SELF.LOCK
     // reads until it gets a line that starts with responseLineRegex -- then reads til the end of that line.
     // can be the same line as the command (ie. 0 \r)
-    private func _readLine(minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?, Error?)->Void) {
+    private func _readLine(minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?, Error?)->Void) {
         self.queue.async {
             let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
             self.lastOpMillis = millis
@@ -252,7 +252,7 @@ class DenonStreams {
                     return
                 }
                 if let _ = received {
-                    self._readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutBlock: timeoutBlock, completionBlock)
+                    self._readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, completionBlock)
                     return
                 }
                 
