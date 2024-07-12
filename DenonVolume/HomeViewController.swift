@@ -9,6 +9,15 @@
 import UIKit
 
 class HomeViewController: UIViewController {
+    var zone: Int {
+        get { AppDelegate.shared.zone }
+        set {
+            AppDelegate.shared.zone = newValue
+            self.multiEqButton.isEnabled = newValue == 1
+            self.updateSource(source: newValue == 2 ? self.denon?.zone2Source : self.denon?.lastSource, isZone2: newValue == 2)
+        }
+    }
+
     var denon: DenonController? {
         get {
             return AppDelegate.shared.denon
@@ -20,8 +29,10 @@ class HomeViewController: UIViewController {
 
     var panSlowly = false {
         didSet {
-            self.volumeBackgroundView.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
-            self.volumeForegroundView.backgroundColor = panSlowly ? Colors.yellow : Colors.reverseTint
+            let bgView = self.zone == 2 ? self.z2BackgroundView : self.volumeBackgroundView
+            let fgView = self.zone == 2 ? self.z2ForegroundView : self.volumeForegroundView
+            bgView!.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
+            fgView!.backgroundColor = panSlowly ? Colors.yellow : Colors.reverseTint
         }
     }
     var panBeginning = false
@@ -84,18 +95,24 @@ class HomeViewController: UIViewController {
     
     @IBOutlet var buttons: [UIButton]!
     @IBOutlet weak var muteButton: UIButton!
-    @IBOutlet var panGesture: UIPanGestureRecognizer!
+    @IBOutlet var mainPanGesture: UIPanGestureRecognizer!
+    @IBOutlet var z2PanGesture: UIPanGestureRecognizer!
     @IBOutlet var tapGesture: UITapGestureRecognizer!
     @IBOutlet var longPressGesture: UILongPressGestureRecognizer!
     
     @IBOutlet weak var volumeBackgroundView: UIView!
     @IBOutlet weak var volumeForegroundView: UIView!
-    
+
+    @IBOutlet weak var z2BackgroundView: UIView!
+    @IBOutlet weak var z2ForegroundView: UIView!
+    var z2VolumeHeightConstraint: NSLayoutConstraint?
+    @IBOutlet weak var z2VolumeLabel: UILabel!
+
     @IBOutlet weak var buttonsStackview: UIStackView!
     @IBOutlet weak var surroundModeLabel: UILabel!
     @IBOutlet weak var volumeLabel: UILabel!
     @IBOutlet weak var volButtonHigh: UIButton!
-    @IBOutlet weak var volButtonMed: UIButton!
+    @IBOutlet weak var volButtonMed: UIButton?
     @IBOutlet weak var volButtonLow: UIButton!
     @IBOutlet weak var powerButton: UIButton!
     @IBOutlet weak var powerCoverView: UIView!
@@ -108,26 +125,33 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var sourcesButton: UIButton!
     @IBOutlet weak var settingsButton: UIButton!
     @IBOutlet weak var multiEqButton: UIButton!
+    @IBOutlet weak var zoneSegment: UISegmentedControl!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         DLog("UIScreen.main height = \(UIScreen.main.bounds.height)")
-        if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
-            self.buttonsStackview.spacing = 20
-            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
-        }
         if UIScreen.main.bounds.height < 665 { // iPhone SE1 / iphone 5S: 568
             self.buttonsStackview.spacing = 10
+            self.volButtonMed?.removeFromSuperview()
             self.buttonsStackviewCenterYConstraint.constant = 23 // shift downwards
+        } else if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
+            self.buttonsStackview.spacing = 20
+            self.volButtonMed?.removeFromSuperview()
+            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
+        } else {
+            self.buttonsStackviewCenterYConstraint.constant = 26 // shift downwards
         }
         
         self.debugLabel.text = ""
-        self.panGesture.delegate = self
+        self.mainPanGesture.delegate = self
+        self.z2PanGesture.delegate = self
         self.tapGesture.delegate = self
         self.longPressGesture.delegate = self
         self.volumeForegroundView.clipsToBounds = true
         self.volumeBackgroundView.clipsToBounds = true
-        
+        self.z2ForegroundView.clipsToBounds = true
+        self.z2BackgroundView.clipsToBounds = true
+
         let feedbackStyle: UIImpactFeedbackGenerator.FeedbackStyle
         if #available(iOS 13.0, *) {
             feedbackStyle = .rigid
@@ -147,22 +171,25 @@ class HomeViewController: UIViewController {
             self.settingsButton.setTitle(nil, for: .normal)
             self.debugLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            self.z2VolumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.surroundModeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
             self.volButtonLow.setTitle(nil, for: .normal)
             self.volButtonLow.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
-            self.volButtonMed.setTitle(nil, for: .normal)
-            self.volButtonMed.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
+            self.volButtonMed?.setTitle(nil, for: .normal)
+            self.volButtonMed?.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
             self.volButtonHigh.setTitle(nil, for: .normal)
             self.volButtonHigh.setImage(UIImage.init(systemName: "speaker.3.fill"), for: .normal)
         } else {
             self.surroundModeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+            self.z2VolumeLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.debugLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.white.withAlphaComponent(0.9)
         }
         self.surroundModeLabel.text = self.denon?.lastSurroundMode ?? "__"
-        self.volumeLabel.text = "__ dB"
+        self.volumeLabel.text = "__"
+        self.z2VolumeLabel.text = "__"
         self.sourcesButton.setTitle("__", for: .normal)
         self.setColors()
         self.limitButton.alpha = 0
@@ -205,13 +232,21 @@ class HomeViewController: UIViewController {
         super.viewDidLayoutSubviews()
         self.volumeBackgroundView.layer.borderWidth = 8
         self.volumeBackgroundView.layer.cornerRadius = VOLUME_CORNER_RADIUS
+        self.z2BackgroundView.layer.borderWidth = 4
+        self.z2BackgroundView.layer.cornerRadius = 20
     }
     
+    var didEverResign = false
     @objc fileprivate func appDidBecomeActive() {
+        if !self.didEverResign { return }
+        if self.denon?.verbose == true {
+            DLog("appDidBecomeActive() - calling readVolume()")
+        }
         self.denon?.readVolume()
     }
     
     @objc fileprivate func appWillResignActive() {
+        self.didEverResign = true
         self.panSlowly = false
     }
     
@@ -222,29 +257,22 @@ class HomeViewController: UIViewController {
             guard let initialState = initialState else {
                 return
             }
-            self.updateVolume(initialState.volume)
-            self.updateMuteState(muteState: initialState.isMuted)
-            self.updateSource(source: initialState.source)
-            self.powerCoverView.isHidden = initialState.poweredOn
+            self.updateVolume(initialState.volume, isZone2: self.zone == 2)
+            self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
+            self.updateSource(source: initialState.source, isZone2: self.zone == 2)
+            self.updatePowerCoverView()
         }
     }
     
     func connectionStateChanged(isConnected: Bool) {
         self.coverView.isHidden = isConnected
-        if let lastPower = self.denon?.lastPower {
-            self.powerCoverView.isHidden = lastPower
-        }
+        self.updatePowerCoverView()
     }
     
     var stackviewConstraint: NSLayoutConstraint?
     func updateStackviewConstraints() {
         self.stackviewConstraint?.isActive = false
-        let constraint: NSLayoutConstraint
-        if UserDefaults.standard.bool(forKey: "hvc.stackviewLeft") {
-            constraint = self.buttonsStackview.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 20)
-        } else {
-            constraint = self.buttonsStackview.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
-        }
+        let constraint = self.buttonsStackview.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
         constraint.isActive = true
         self.stackviewConstraint = constraint
     }
@@ -261,8 +289,11 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.backgroundColor = Colors.tint
         self.volumeBackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.volumeForegroundView.backgroundColor = Colors.reverseTint
+        self.z2BackgroundView.backgroundColor = Colors.tint
+        self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
+        self.z2ForegroundView.backgroundColor = Colors.reverseTint
         self.volButtonLow.backgroundColor = Colors.green
-        self.volButtonMed.backgroundColor = Colors.yellow
+        self.volButtonMed?.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
     }
     
@@ -297,31 +328,31 @@ class HomeViewController: UIViewController {
             return
         }
         self.selectionFeedback.selectionChanged()
-        self.updateVolume(v)
+        self.updateVolume(v, isZone2: self.zone == 2)
     }
     
     @IBAction func setVolLow(_ sender: Any) {
-        self.denon?.setVolume(self.lowPreset) { (v, _) in
+        self.denon?.setVolume(self.lowPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     @IBAction func setVolMedium(_ sender: Any) {
-        self.denon?.setVolume(self.medPreset) { (v, _) in
+        self.denon?.setVolume(self.medPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     @IBAction func setVolHigh(_ sender: Any) {
-        self.denon?.setVolume(self.highPreset) { (v, _) in
+        self.denon?.setVolume(self.highPreset, isZone2: self.zone == 2) { (v, _) in
             self.selectionFeedback.selectionChanged()
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: self.zone == 2)
         }
     }
     
     @IBAction func sourcesButtonPressed(_ sender: Any) {
-        let alert = UIAlertController.init(title: "Select Source", message: "Not all sources are available on all Denon receivers.", preferredStyle: .actionSheet)
-        InputSourceSetting.values.forEach { source in
+        let alert = UIAlertController.init(title: "Select Source", message: "Not all sources are available on all receivers.", preferredStyle: .actionSheet)
+        InputSourceSetting.Input.allCases.map { InputSourceSetting.init(input: $0, isZone2: self.zone == 2) }.forEach { source in
             guard source.isHidden == false && source.input != .unknown else { return }
             alert.addAction(UIAlertAction.init(title: source.displayLong, style: .default, handler: { (_) in
                 source.setValue(denon: self.denon) { (err) in
@@ -329,7 +360,7 @@ class HomeViewController: UIViewController {
                         self.showTryAgainAlert()
                         return
                     }
-                    self.updateSource(source: source)
+                    self.updateSource(source: source, isZone2: self.zone == 2)
                 }
             }))
         }
@@ -340,38 +371,72 @@ class HomeViewController: UIViewController {
     }
     
     @IBAction func muteButtonPressed(_ sender: Any) {
-        self.denon?.toggleMuteState() { (err) in
+        self.denon?.toggleMuteState(isZone2: self.zone == 2) { (err) in
             if err == nil {
                 self.impactFeedbackHeavy.impactOccurred()
             }
-            self.updateMuteState()
+            self.updateMuteState(muteState: nil, isZone2: self.zone == 2)
         }
     }
     
+    @IBAction func powerButtonLongPressed(_ sender: UILongPressGestureRecognizer) {
+        self.denon?.setPowerToStandby()
+    }
+
+    @IBAction func powerCoverButtonPressed(_ sender: UIButton) {
+        self.zone = 1
+        self.powerButtonPressed(sender)
+    }
+
     @IBAction func powerButtonPressed(_ sender: UIButton) {
+        guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
 
-        self.denon?.togglePowerState { (initialState) in
+        dc.togglePowerState(isZone2: self.zone == 2) { (initialState) in
             guard let initialState = initialState else {
                 self.buttons.forEach { $0.isEnabled = true }
                 self.showTryAgainAlert()
                 return
             }
             self.impactFeedbackHeavy.impactOccurred()
-            self.updateVolume(initialState.volume)
-            self.updateMuteState(muteState: initialState.isMuted)
-            self.updateSource(source: initialState.source)
-            self.powerCoverView.isHidden = initialState.poweredOn
+            self.updateVolume(initialState.volume, isZone2: false)
+            if let vol = dc.zone2Volume {
+                self.updateVolume(vol, isZone2: true)
+            }
+            self.updateMuteState(muteState: initialState.isMuted, isZone2: false)
+            if let muted = dc.zone2Mute {
+                self.updateMuteState(muteState: muted, isZone2: true)
+            }
+            self.updateSource(source: initialState.source, isZone2: self.zone == 2)
+            self.updatePowerCoverView()
             self.buttons.forEach { $0.isEnabled = true }
         }
+    }
+    
+    func powerStateDidUpdate() {
+        DLog("powerStateDidUpdate()")
+        guard let dc = self.denon else { return }
+        self.updateVolume(dc.lastVolume, isZone2: false)
+        self.updateVolume(dc.zone2Volume, isZone2: true)
+        self.updateMuteState(muteState: dc.lastMute, isZone2: false)
+        self.updateMuteState(muteState: dc.zone2Mute, isZone2: true)
+        self.updateSource(source: self.zone == 2 ? dc.zone2Source : dc.lastSource, isZone2: self.zone == 2)
+        self.updatePowerCoverView()
+    }
+    
+    private func updatePowerCoverView() {
+        guard let dc = self.denon else { return }
+        let anyHasPower = dc.lastPower == true || dc.zone2Power == true
+        self.powerCoverView.isHidden = anyHasPower
     }
     
     @IBAction func limitButtonPressed(_ sender: Any) {
         self.changeVolumeLimit()
     }
     
-    func updateSource(source: InputSourceSetting?) {
+    func updateSource(source: InputSourceSetting?, isZone2: Bool) {
         guard let source = source else { return }
+        if (self.zone == 1 && isZone2) || (self.zone == 2 && !isZone2) { return }
         if source.displayShort.count == 0 {
             self.sourcesButton.setTitle("SRC", for: .normal)
             return
@@ -392,39 +457,55 @@ class HomeViewController: UIViewController {
         }
     }
         
-    func updateVolume(_ volume: Double?) {
-        let isMuted = self.denon?.lastMute
+    func updateVolume(_ volume: Double?, isZone2: Bool) {
+        let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
+        let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
         self.view.layoutIfNeeded()
         assert(Thread.current.isMainThread)
-        if self.denon?.verbose ?? false { DLog("HVC updateVolume: \(String(describing: volume)), isMuted=\(String(describing: isMuted))") }
+        if self.denon?.verbose ?? false { DLog("HVC updateVolume: \(String(describing: volume)), isMuted=\(String(describing: isMuted)), isZone2=\(isZone2)") }
+        let volumeLabel = isZone2 ? self.z2VolumeLabel : self.volumeLabel
         if isMuted == true {
-            self.volumeLabel.text = "Muted"
+            volumeLabel?.text = zoneText + "Muted"
         }
-            
-        guard let volume = volume else { return }
-        if isMuted != true {
-            self.volumeLabel.text = self.volumeToString(vol: volume)
+        let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+        if powerBool == false {
+            // For this case we want show same state of the volume slider as when it is muted; that will happen in updateMuteState()
+            volumeLabel?.text = zoneText + "OFF"
         }
-        let bgHeight = self.volumeBackgroundView.bounds.height
+        
+        guard let volume = volume ?? (isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume) else { return }
+        if isMuted != true && powerBool != false {
+            volumeLabel?.text = zoneText + self.volumeToString(vol: volume)
+        }
+        let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+        let bgHeight = bgView!.bounds.height
         let fgHeight: CGFloat
         if volume <= self.minimumVolume {
             fgHeight = 0
         } else {
             fgHeight = CGFloat((volume - self.minimumVolume) / ((self.denon?.volumeMax ?? 98) - self.minimumVolume)) * bgHeight
         }
-        self.volumeHeightConstraint?.isActive = false
-        let newConstraint = self.volumeForegroundView.heightAnchor.constraint(equalToConstant: fgHeight)
+        let constraint = isZone2 ? self.z2VolumeHeightConstraint : self.volumeHeightConstraint
+        constraint?.isActive = false
+        let fgView = isZone2 ? self.z2ForegroundView : self.volumeForegroundView
+        let newConstraint = fgView!.heightAnchor.constraint(equalToConstant: fgHeight)
         newConstraint.isActive = true
-        self.volumeHeightConstraint = newConstraint
-        self.volumeForegroundView.setNeedsLayout()
+        if isZone2 {
+            self.z2VolumeHeightConstraint = newConstraint
+        } else {
+            self.volumeHeightConstraint = newConstraint
+        }
+        fgView!.setNeedsLayout()
         UIView.animate(withDuration: 0.1) {
             self.view.layoutIfNeeded()
-            self.limitLineView.alpha = self.volumeIsMax(volume) ? 1.0 : 0
-            self.limitButton.alpha = self.volumeIsMax(volume) ? 1.0 : 0
+            if !isZone2 {
+                self.limitLineView.alpha = self.volumeIsMax(volume) && powerBool != false ? 1.0 : 0
+                self.limitButton.alpha = self.volumeIsMax(volume) && powerBool != false ? 1.0 : 0
+            }
         }
     }
     
-    func updateMuteState(muteState: Bool? = nil) {
+    func updateMuteState(muteState: Bool? = nil, isZone2: Bool) {
         let work: (Bool?, Error?)->Void = { (muted, error) in
             let mutedImage: UIImage
             if #available(iOS 13.0, *) {
@@ -438,23 +519,46 @@ class HomeViewController: UIViewController {
                 return
             }
             self.muteButton.setImage(mutedImage, for: .normal)
-            self.volumeForegroundView.backgroundColor = muted ? Colors.darkGray : Colors.reverseTint
-            self.volumeBackgroundView.layer.borderColor = muted ? Colors.darkGray.cgColor : Colors.reverseTint.cgColor
-            self.updateVolume(self.denon?.lastVolume)
+            
+            let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+            let fgView = isZone2 ? self.z2ForegroundView : self.volumeForegroundView
+            let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+            fgView!.backgroundColor = powerBool == false || muted ? Colors.darkGray : Colors.reverseTint
+            bgView!.layer.borderColor = powerBool == false || muted ? Colors.darkGray.cgColor : Colors.reverseTint.cgColor
+            self.updateVolume(isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume, isZone2: isZone2)
         }
         if let muteState = muteState {
             work(muteState, nil)
             return
         }
         self.denon?.readMuteState() { [weak self] (error) in
-            work(self?.denon?.lastMute, error)
+            work(isZone2 ? self?.denon?.zone2Mute : self?.denon?.lastMute, error)
         }
     }
     
-    @IBAction func handleTap(_ sender: UITapGestureRecognizer) {
-        self.muteButtonPressed(sender)
+    @IBAction func zoneSegmentChanged(_ sender: UISegmentedControl) {
+        if sender.selectedSegmentIndex == 0 {
+            self.zone = 2
+        } else if sender.selectedSegmentIndex == 1 {
+            self.zone = 1
+        }
     }
     
+    // DOUBLE TAP TO MUTE
+    @IBAction func handleDoubleTap(_ sender: UITapGestureRecognizer) {
+        self.muteButtonPressed(sender)
+    }
+
+    @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
+        self.zoneSegment.selectedSegmentIndex = 0
+        self.zone = 2
+    }
+
+    @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
+        self.zoneSegment.selectedSegmentIndex = 1
+        self.zone = 1
+    }
+
     // does have ended state
     @IBAction func handleLongPress(_ sender: UILongPressGestureRecognizer) {
         switch sender.state {
@@ -469,12 +573,19 @@ class HomeViewController: UIViewController {
     }
     
     // does not have ended state
-    @IBAction func handlePan(_ gesture: UIPanGestureRecognizer) {
+    @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
+        let isZone2 = gesture == self.z2PanGesture
+        let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
+        if powerBool == false {
+            return
+        }
+        
         if self.panBeginning {
             self.panBeginning = false
             self.denon?.readVolume { (err) in
                 if let err = err { DLog("HVC readVolume ERROR: \(err)") }
-                if let vol = self.denon?.lastVolume {
+                let volBool = isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume
+                if let vol = volBool {
                     DLog("HVC handlePan beginning readVolume = \(vol)")
                     self.volumeAtStartOfPan = vol
                 }
@@ -483,7 +594,8 @@ class HomeViewController: UIViewController {
         guard let volume = self.volumeAtStartOfPan else { return }
 
         let coords = gesture.translation(in: nil)
-        var heightRange = self.volumeBackgroundView.bounds.height
+        let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
+        var heightRange = bgView!.bounds.height
         if self.panSlowly {
             heightRange *= self.panSlowlyMultiplier
         }
@@ -500,16 +612,14 @@ class HomeViewController: UIViewController {
         }
         result = min(result, self.denon?.maxAllowedSafeVolume ?? self.denon?.volumeMax ?? 98)
         result = max(result, 0) // self.minimumVolume)
-        result = result.round(nearest: 0.5)
+        result = result.round(nearest: isZone2 ? 1 : 0.5) // zone 2 cannot due half DBs like 33.5
 
         if self.volumeLastDesiredInPan == result {
-//            DLog("percentOfFullVolumeRange = \(percentOfFullVolumeRange * 100), resultInt = \(resultInt), no-op")
             return
         }
         self.volumeLastDesiredInPan = result
-//        DLog("percentOfFullVolumeRange = \(percentOfFullVolumeRange * 100), resultInt = \(resultInt), setting")
 
-        self.denon?.setVolume(result) { (v, err) in
+        self.denon?.setVolume(result, isZone2: isZone2) { (v, err) in
             if let err = err {
                 if self.denon?.verbose ?? false { DLog("pan setVolume, ERROR: \(err)") }
             }
@@ -520,7 +630,7 @@ class HomeViewController: UIViewController {
                 self.selectionFeedback?.selectionChanged()
             }
             self.volumeLastSetInPan = v
-            self.updateVolume(v)
+            self.updateVolume(v, isZone2: isZone2)
         }
     }
     
@@ -559,7 +669,7 @@ extension HomeViewController : UIGestureRecognizerDelegate {
             return false
         }
         
-        if gestureRecognizer === self.panGesture {
+        if gestureRecognizer === self.mainPanGesture || gestureRecognizer == self.z2PanGesture {
             panBeginning = true
             volumeAtStartOfPan = nil
             self.impactFeedbackHeavy.prepare()
@@ -569,10 +679,10 @@ extension HomeViewController : UIGestureRecognizerDelegate {
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer == self.panGesture && otherGestureRecognizer == self.longPressGesture {
+        if (gestureRecognizer == self.mainPanGesture || gestureRecognizer == self.z2PanGesture) && otherGestureRecognizer == self.longPressGesture {
             return true
         }
-        if otherGestureRecognizer == self.panGesture && gestureRecognizer == self.longPressGesture {
+        if (otherGestureRecognizer == self.mainPanGesture || gestureRecognizer == self.z2PanGesture) && gestureRecognizer == self.longPressGesture {
             return true
         }
         return false
