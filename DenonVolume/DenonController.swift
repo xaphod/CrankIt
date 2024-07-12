@@ -534,7 +534,7 @@ class DenonController {
             val = String(format: "%02d5", Int(volumeDouble))
         }
 
-        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", minLength: 2, responseLineRegex: isZone2 ? #"Z2(?!ON)[0-9]{2,3}.*"# : #"MV(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", canQueue: false, minLength: 2, responseLineRegex: isZone2 ? #"Z2(?!ON)[0-9]{2,3}.*"# : #"MV(?!MAX).*"#, timeoutBlock: {
             completionBlock?(nil, .tryAgain) // don't report old values here since changing so fast
         }) { (str, err) in
             DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil") for zone \(isZone2 ? "2" : "1")")
@@ -556,7 +556,7 @@ class DenonController {
         }
     }
     
-    func issueCommand(_ command: String, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
+    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
         guard !self.demoMode else {
             completionBlock?(responseLineRegex, nil)
             return
@@ -568,26 +568,28 @@ class DenonController {
         }
         
         if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace }))") }
-        streams.write((command+"\r").data(using: .ascii)!, timeoutBlock: timeoutBlock) { (error) in
+        
+        let tBlock = {
+            DLog("DC issueCommand: \(command) TIMED OUT")
+            timeoutBlock()
+        }
+
+        streams.writeAndRead((command+"\r").data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
             if let error = error {
                 DLog("DC issueCommand: ERROR writing, disconnecting - \(error)")
                 self.disconnect()
                 completionBlock?(nil, .streamError(error))
                 return
             }
-            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: {
-                DLog("DC issueCommand: \(command) TIMED OUT")
-                timeoutBlock()
-            } ) { (str) in
-                if let str = str {
-                    if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
-                    completionBlock?(str, nil)
-                    return
-                }
-                DLog("DC issueCommand: ERROR on readLine, disconnecting")
-                self.disconnect()
-                completionBlock?(nil, .noDataReturned)
+
+            if let str = str {
+                if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
+                completionBlock?(str, nil)
+                return
             }
+            DLog("DC issueCommand: ERROR on readLine, disconnecting")
+            self.disconnect()
+            completionBlock?(nil, .noDataReturned)
         }
     }
 
