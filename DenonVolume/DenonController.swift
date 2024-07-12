@@ -51,7 +51,11 @@ class DenonController {
     }
 
     var lastEQ: MultiEQSetting?
-    var lastPower: Bool?
+    var lastPower: Bool? {
+        didSet {
+            DLog("main zone power -> \(String(describing: lastPower))")
+        }
+    }
     var lastVolume: Double?
     var lastVolumeBetween0and1: Double? {
         guard let lastVolume = self.lastVolume else { return nil }
@@ -86,7 +90,7 @@ class DenonController {
     
     var zone2Power: Bool? {
         didSet {
-            DLog("*** zone2Power -> \(zone2Power)")
+            DLog("zone2Power -> \(String(describing: zone2Power))")
         }
     }
     var zone2Volume: Double?
@@ -189,6 +193,9 @@ class DenonController {
             return
         }
 
+        if self.verbose {
+            DLog("getInitialState() - readVolume, readMuteState, readSourceState")
+        }
         self.readVolume() { (_) in
             self.readMuteState { (_) in
                 self.readSourceState { (_) in
@@ -568,7 +575,10 @@ class DenonController {
                 completionBlock?(nil, .streamError(error))
                 return
             }
-            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock) { (str) in
+            streams.readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: {
+                DLog("DC issueCommand: \(command) TIMED OUT")
+                timeoutBlock()
+            } ) { (str) in
                 if let str = str {
                     if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
                     completionBlock?(str, nil)

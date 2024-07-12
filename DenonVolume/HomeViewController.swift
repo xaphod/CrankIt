@@ -236,11 +236,17 @@ class HomeViewController: UIViewController {
         self.z2BackgroundView.layer.cornerRadius = 20
     }
     
+    var didEverResign = false
     @objc fileprivate func appDidBecomeActive() {
+        if !self.didEverResign { return }
+        if self.denon?.verbose == true {
+            DLog("appDidBecomeActive() - calling readVolume()")
+        }
         self.denon?.readVolume()
     }
     
     @objc fileprivate func appWillResignActive() {
+        self.didEverResign = true
         self.panSlowly = false
     }
     
@@ -442,7 +448,6 @@ class HomeViewController: UIViewController {
     }
         
     func updateVolume(_ volume: Double?, isZone2: Bool) {
-        DLog("*** updateVolume()")
         let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
         let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
         self.view.layoutIfNeeded()

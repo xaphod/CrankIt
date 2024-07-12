@@ -174,7 +174,6 @@ class DenonStreams {
             self.queue.asyncAfter(deadline: .now() + timeoutTime) { [weak self] in
                 guard let self = self else { return }
                 guard self.lastOpMillis == millis else { return }
-                DLog("DenonStreams readLine TIMEOUT, regex = \(responseLineRegex)")
                 self.lock.unlock()
                 self.receiveWaiter = nil
                 DispatchQueue.main.async { timeoutBlock?() }
