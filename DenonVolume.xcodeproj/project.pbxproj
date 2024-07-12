@@ -53,6 +53,7 @@
 		22C77D6D246088DD00EA3F2C /* Receiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Receiver.swift; sourceTree = "<group>"; };
 		22C77D6F2460F4BD00EA3F2C /* silence-1min.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "silence-1min.mp3"; sourceTree = "<group>"; };
 		22C77D712460F86F00EA3F2C /* AudioController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioController.swift; sourceTree = "<group>"; };
+		22D715D52C41F47900B9B358 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		22E08FBD245C94DD00586946 /* RootViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewController.swift; sourceTree = "<group>"; };
 		22E08FBF245C985500586946 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		22E1C6E92466203B00A16377 /* sweep.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = sweep.mp3; sourceTree = "<group>"; };
@@ -75,6 +76,7 @@
 		2292CC95245996FB0063D7AD = {
 			isa = PBXGroup;
 			children = (
+				22D715D52C41F47900B9B358 /* PrivacyInfo.xcprivacy */,
 				2292CCA0245996FC0063D7AD /* DenonVolume */,
 				2292CC9F245996FC0063D7AD /* Products */,
 				67686B16FFA7669BB44B8085 /* Pods */,
