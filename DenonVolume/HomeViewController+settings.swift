@@ -14,12 +14,6 @@ extension HomeViewController {
         alert.popoverPresentationController?.sourceView = sender.superview
         alert.popoverPresentationController?.sourceRect = sender.frame
         alert.addAction(UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction.init(title: "Talk to us on our forums", style: .default, handler: { (_) in
-            UIApplication.shared.open(URL.init(string: "https://wifibooth.com/community/viewforum.php?f=11")!, options: [:], completionHandler: nil)
-        }))
-        alert.addAction(UIAlertAction.init(title: "Privacy Policy", style: .default, handler: { (_) in
-            UIApplication.shared.open(URL.init(string: "https://soloslides.app/privacy/")!, options: [:], completionHandler: nil)
-        }))
         alert.addAction(UIAlertAction.init(title: "Reveal dark secrets", style: .default, handler: { (_) in
             self.showTips()
         }))
@@ -33,12 +27,11 @@ extension HomeViewController {
             volStyleDesc = "dB"
         }
 
-        alert.addAction(UIAlertAction.init(title: "Change volume style to \(volStyleDesc)", style: .default, handler: { (_) in
-            self.volumeDisplayStyle = nextVolStyle
-            self.updateVolume(self.denon?.lastVolume, isZone2: self.zone == 2)
-        }))
         alert.addAction(UIAlertAction.init(title: "Change volume limit (\(self.denon?.maxAllowedSafeVolume ?? 80))", style: .default, handler: { (_) in
             self.changeVolumeLimit()
+        }))
+        alert.addAction(UIAlertAction.init(title: AudioController.shared.disabled ? "Enable audio so vol buttons work" : "Disable audio so music doesn't stop", style: .default, handler: { (_) in
+            AudioController.shared.disabled = !AudioController.shared.disabled
         }))
         alert.addAction(UIAlertAction.init(title: "Change high volume preset", style: .default, handler: { (_) in
             self.changePreset(key: "high")
@@ -51,6 +44,10 @@ extension HomeViewController {
         }))
         alert.addAction(UIAlertAction.init(title: "Change minimum volume (\(self.denon?.minimumVolume ?? 30))", style: .default, handler: { (_) in
             self.changePreset(key: "minimum")
+        }))
+        alert.addAction(UIAlertAction.init(title: "Change volume style to \(volStyleDesc)", style: .default, handler: { (_) in
+            self.volumeDisplayStyle = nextVolStyle
+            self.updateVolume(self.denon?.lastVolume, isZone2: self.zone == 2)
         }))
         alert.addAction(UIAlertAction.init(title: "Hide / show input sources", style: .default, handler: { (_) in
             self.inputSourcesShowOrHide(sender: sender)
@@ -70,9 +67,11 @@ extension HomeViewController {
                 AudioController.shared.setupPlayer()
             }))
         }
-        let title = AudioController.shared.disabled ? "Enable audio so vol buttons work" : "Disable audio so music doesn't stop"
-        alert.addAction(UIAlertAction.init(title: title, style: .default, handler: { (_) in
-            AudioController.shared.disabled = !AudioController.shared.disabled
+        alert.addAction(UIAlertAction.init(title: "Talk to us on our forums", style: .default, handler: { (_) in
+            UIApplication.shared.open(URL.init(string: "https://wifibooth.com/community/viewforum.php?f=11")!, options: [:], completionHandler: nil)
+        }))
+        alert.addAction(UIAlertAction.init(title: "Privacy Policy", style: .default, handler: { (_) in
+            UIApplication.shared.open(URL.init(string: "https://soloslides.app/privacy/")!, options: [:], completionHandler: nil)
         }))
         self.present(alert, animated: true, completion: nil)
     }
@@ -198,15 +197,19 @@ extension HomeViewController {
     
     func showTips() {
         let alert = UIAlertController.init(title: "Hawt Tips", message: """
-Here are things you can do that might not be obvious:
+- the buttons are controlling one zone at a time: the main zone (MZ) or zone 2 (Z2)
 
-- you can swipe up and down anywhere on the screen (does not have to be within the bounds of the volume bar)
+- tap a volume bar to tell the buttons to start controlling that zone
 
-- you can double-tap to mute
+- hold your finger down a moment before swiping the volume and the bar will go yellow: you're now in "slow swiping" mode
 
-- if you hold your finger down for a second before starting to swipe (ie. long-press then swipe), the bar turns yellow and the volume change rate is slower. This is for when you want to make minor changes to the volume
+- double-tap a volume bar to mute that zone
 
-- after enabling the volume buttons (last option on the menu) you can use the phone's volume up/down buttons even when the app is in the background, or when the phone is locked / screen off
+- long-press the power button to turn off both zones
+
+- there's a volume limit so you don't accidentally swipe too loud, you can set the limit in the menu
+
+- you can use the phone's volume up/down buttons (even when the app is in the background or phone is locked) if you hit "Enable audio so vol buttons work" in the menu, but doing this causes music the phone is playing to stop
 """
             , preferredStyle: .alert)
         alert.addAction(UIAlertAction.init(title: "OK", style: .cancel, handler: nil))
