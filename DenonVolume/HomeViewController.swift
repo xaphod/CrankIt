@@ -528,9 +528,9 @@ class HomeViewController: UIViewController {
     
     @IBAction func zoneSegmentChanged(_ sender: UISegmentedControl) {
         if sender.selectedSegmentIndex == 0 {
-            self.zone = 1
-        } else if sender.selectedSegmentIndex == 1 {
             self.zone = 2
+        } else if sender.selectedSegmentIndex == 1 {
+            self.zone = 1
         }
     }
     
@@ -539,14 +539,14 @@ class HomeViewController: UIViewController {
         self.muteButtonPressed(sender)
     }
 
-    @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
+    @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 0
-        self.zone = 1
+        self.zone = 2
     }
 
-    @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
+    @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 1
-        self.zone = 2
+        self.zone = 1
     }
 
     // does have ended state

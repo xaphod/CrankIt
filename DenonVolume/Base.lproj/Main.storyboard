@@ -108,11 +108,11 @@
                             <stackView opaque="NO" contentMode="scaleToFill" ambiguous="YES" axis="vertical" spacing="30" translatesAutoresizingMaskIntoConstraints="NO" id="Lv4-oC-smk">
                                 <rect key="frame" x="240" y="148" width="60" height="661"/>
                                 <subviews>
-                                    <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="QwB-bq-XtR">
+                                    <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="1" translatesAutoresizingMaskIntoConstraints="NO" id="QwB-bq-XtR">
                                         <rect key="frame" x="0.0" y="0.0" width="60" height="32"/>
                                         <segments>
-                                            <segment title="MZ"/>
                                             <segment title="Z2"/>
+                                            <segment title="MZ"/>
                                         </segments>
                                         <connections>
                                             <action selector="zoneSegmentChanged:" destination="Mxy-Vh-eFF" eventType="valueChanged" id="lMZ-D5-uMd"/>
