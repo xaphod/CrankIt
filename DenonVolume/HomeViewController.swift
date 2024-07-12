@@ -260,15 +260,13 @@ class HomeViewController: UIViewController {
             self.updateVolume(initialState.volume, isZone2: self.zone == 2)
             self.updateMuteState(muteState: initialState.isMuted, isZone2: self.zone == 2)
             self.updateSource(source: initialState.source, isZone2: self.zone == 2)
-            self.powerCoverView.isHidden = initialState.poweredOn // TODO: what happens when z2 powered on, z1 off? what do we want?
+            self.updatePowerCoverView()
         }
     }
     
     func connectionStateChanged(isConnected: Bool) {
         self.coverView.isHidden = isConnected
-        if let lastPower = self.denon?.lastPower {
-            self.powerCoverView.isHidden = lastPower
-        }
+        self.updatePowerCoverView()
     }
     
     var stackviewConstraint: NSLayoutConstraint?
@@ -380,7 +378,12 @@ class HomeViewController: UIViewController {
             self.updateMuteState(muteState: nil, isZone2: self.zone == 2)
         }
     }
-    
+
+    @IBAction func powerCoverButtonPressed(_ sender: UIButton) {
+        self.zone = 1
+        self.powerButtonPressed(sender)
+    }
+
     @IBAction func powerButtonPressed(_ sender: UIButton) {
         guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
@@ -401,9 +404,7 @@ class HomeViewController: UIViewController {
                 self.updateMuteState(muteState: muted, isZone2: true)
             }
             self.updateSource(source: initialState.source, isZone2: self.zone == 2)
-            let anyHasPower = dc.lastPower == true || dc.zone2Power == true
-            self.powerCoverView.isHidden = anyHasPower
-
+            self.updatePowerCoverView()
             self.buttons.forEach { $0.isEnabled = true }
         }
     }
@@ -416,6 +417,11 @@ class HomeViewController: UIViewController {
         self.updateMuteState(muteState: dc.lastMute, isZone2: false)
         self.updateMuteState(muteState: dc.zone2Mute, isZone2: true)
         self.updateSource(source: self.zone == 2 ? dc.zone2Source : dc.lastSource, isZone2: self.zone == 2)
+        self.updatePowerCoverView()
+    }
+    
+    private func updatePowerCoverView() {
+        guard let dc = self.denon else { return }
         let anyHasPower = dc.lastPower == true || dc.zone2Power == true
         self.powerCoverView.isHidden = anyHasPower
     }

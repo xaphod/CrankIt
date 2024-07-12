@@ -329,7 +329,7 @@ class DenonController {
             return
         }
 
-        self.issueCommand("PW?", minLength: 4, responseLineRegex: #"(PWON)|(PWSTANDBY)"#, timeoutBlock: {
+        self.issueCommand("ZM?", minLength: 4, responseLineRegex: #"(ZMON)|(ZMOFF)|(PWSTANDBY)"#, timeoutBlock: {
             completionBlock?(self.lastPower, nil)
         }) { (pwstr, err) in
             guard let pwstr = pwstr else {
@@ -338,10 +338,10 @@ class DenonController {
             }
             
             let work = {
-                if pwstr.hasPrefix("PWON") {
+                if pwstr.hasPrefix("ZMON") {
                     self.lastPower = true
                     completionBlock?(true, nil)
-                } else if pwstr.hasPrefix("PWSTANDBY") {
+                } else if pwstr.hasPrefix("ZMOFF") || pwstr.hasPrefix("PWSTANDBY") {
                     self.lastPower = false
                     completionBlock?(false, nil)
                 } else {
@@ -382,7 +382,7 @@ class DenonController {
 
         // Turning OFF
         if powerState {
-            self.issueCommand(isZone2 ? "Z2OFF" : "PWSTANDBY", minLength: 4, responseLineRegex: isZone2 ? #"Z2OFF.*"# :  #"PWSTANDBY.*"#, timeoutBlock: {
+            self.issueCommand(isZone2 ? "Z2OFF" : "ZMOFF", minLength: 4, responseLineRegex: isZone2 ? #"Z2OFF.*"# :  #"ZMOFF.*"#, timeoutBlock: {
                 completionBlock?(nil)
             }) { (str, error) in
                 DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
@@ -399,7 +399,7 @@ class DenonController {
         }
 
         // Turning ON
-        self.issueCommand(isZone2 ? "Z2ON" : "PWON", minLength: 4, responseLineRegex: isZone2 ? #"Z2ON.*"# : #"PWON.*"#, timeoutTime: 3.9, timeoutBlock: {
+        self.issueCommand(isZone2 ? "Z2ON" : "ZMON", minLength: 4, responseLineRegex: isZone2 ? #"Z2ON.*"# : #"ZMON.*"#, timeoutTime: 3.9, timeoutBlock: {
             completionBlock?(nil)
         }) { (str, error) in
             guard let _ = str else {
