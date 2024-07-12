@@ -210,6 +210,8 @@ extension HomeViewController {
 - there's a volume limit so you don't accidentally swipe too loud, you can set the limit in the menu
 
 - you can use the phone's volume up/down buttons (even when the app is in the background or phone is locked) if you hit "Enable audio so vol buttons work" in the menu, but doing this causes music the phone is playing to stop
+
+- this app is open-source: https://github.com/xaphod/CrankIt
 """
             , preferredStyle: .alert)
         alert.addAction(UIAlertAction.init(title: "OK", style: .cancel, handler: nil))
