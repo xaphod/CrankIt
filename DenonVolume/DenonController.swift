@@ -35,7 +35,11 @@ protocol DenonSetting {
 }
 
 class DenonController {
+    #if DEBUG
     let verbose = true
+    #else
+    let verbose = false
+    #endif
     
     weak var hvc: HomeViewController?
     
