@@ -58,6 +58,12 @@ class DenonController {
     var lastPower: Bool? {
         didSet {
             DLog("main zone power -> \(String(describing: lastPower))")
+            
+            // first run
+            if self.lastPower == true, !UserDefaults.standard.bool(forKey: "hvc.firstRun200") {
+                UserDefaults.standard.set(true, forKey: "hvc.firstRun200")
+                self.hvc?.showTips()
+            }
         }
     }
     var lastVolume: Double?

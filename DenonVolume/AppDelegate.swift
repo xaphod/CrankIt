@@ -10,6 +10,14 @@ import UIKit
 import Firebase
 import StoreKit
 
+let buildNumberString = Bundle.main.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as! String
+var buildNumber: Int? {
+    if let build = Int(buildNumberString) { return build }
+    return nil
+}
+let versionString = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+let versionBuildString = "\(versionString ?? "")"
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?

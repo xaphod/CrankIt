@@ -14,7 +14,7 @@ extension HomeViewController {
         alert.popoverPresentationController?.sourceView = sender.superview
         alert.popoverPresentationController?.sourceRect = sender.frame
         alert.addAction(UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction.init(title: "Reveal dark secrets", style: .default, handler: { (_) in
+        alert.addAction(UIAlertAction.init(title: "Hawt Tips", style: .default, handler: { (_) in
             self.showTips()
         }))
         let nextVolStyle: VolumeDisplayStyle
@@ -196,7 +196,7 @@ extension HomeViewController {
     }
     
     func showTips() {
-        let alert = UIAlertController.init(title: "Hawt Tips", message: """
+        let alert = UIAlertController.init(title: "Hawt Tips - v\(versionBuildString)", message: """
 - the buttons are controlling one zone at a time: the main zone (MZ) or zone 2 (Z2)
 
 - tap a volume bar to tell the buttons to start controlling that zone
