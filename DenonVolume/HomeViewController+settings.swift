@@ -14,7 +14,7 @@ extension HomeViewController {
         alert.popoverPresentationController?.sourceView = sender.superview
         alert.popoverPresentationController?.sourceRect = sender.frame
         alert.addAction(UIAlertAction.init(title: "Cancel", style: .cancel, handler: nil))
-        alert.addAction(UIAlertAction.init(title: "Reveal dark secrets", style: .default, handler: { (_) in
+        alert.addAction(UIAlertAction.init(title: "Hawt Tips", style: .default, handler: { (_) in
             self.showTips()
         }))
         let nextVolStyle: VolumeDisplayStyle
