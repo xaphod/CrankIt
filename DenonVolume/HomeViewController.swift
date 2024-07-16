@@ -29,6 +29,10 @@ class HomeViewController: UIViewController {
 
     var panSlowly = false {
         didSet {
+            let isMuted = self.zone == 2 ? self.denon?.zone2Mute : self.denon?.lastMute
+            if isMuted == true {
+                return
+            }
             let bgView = self.zone == 2 ? self.z2BackgroundView : self.volumeBackgroundView
             let fgView = self.zone == 2 ? self.z2ForegroundView : self.volumeForegroundView
             bgView!.layer.borderColor = panSlowly ? Colors.yellow.cgColor : Colors.reverseTint.cgColor
