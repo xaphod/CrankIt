@@ -15,7 +15,7 @@ class DenonStreams {
     let queue: DispatchQueue
     let lock = NSLock.init()
     private var unprocessedReceived = ""
-    private let TIMEOUT_TIME: TimeInterval = 2
+    static let TIMEOUT_TIME: TimeInterval = 2
     var lastOpMillis: Double = 0
     
     fileprivate var receiveWaiter: ((String?)->Void)?
@@ -79,6 +79,9 @@ class DenonStreams {
             var received: String?
             if let data = data, let str = String.init(data: data, encoding: .ascii) {
                 received = str
+                if self.dc?.verbose == true {
+                    DLog("received, has waiter=\(self.receiveWaiter != nil): \(received)")
+                }
             }
             let waiter = self.receiveWaiter
             self.receiveWaiter = nil
@@ -100,83 +103,122 @@ class DenonStreams {
         }
     }
     
-    func write(_ data: Data, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (Error?)->Void) {
-        self.queue.async {
-            guard self.lock.try() else {
-                if self.dc?.verbose == true { DLog("DenonStreams write did not get lock") }
-                DispatchQueue.main.async { timeoutBlock?() }
-                return
-            }
+    private struct QueueItem {
+        var data: Data
+        var timeoutTime: TimeInterval
+        var timeoutBlock: (()->Void)?
+        var minLength: Int
+        var responseLineRegex: String?
+        var completionBlock: (String?, Error?)->Void
+    }
+    private var writeQueue = [QueueItem]()
 
-            let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
-            self.lastOpMillis = millis
-            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
-                guard let self = self else { return }
-                guard self.lastOpMillis == millis else { return }
-                DLog("DenonStreams write TIMEOUT")
-                self.lock.unlock()
-                self.connection.cancel()
-                DispatchQueue.main.async { timeoutBlock?() }
+    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, _ completionBlock: @escaping (String?, Error?)->Void) {
+        self.queue.async {
+            let hasLock = self.lock.try()
+            if !hasLock, !canQueue {
+                return // drop it
             }
-            self.connection.send(content: data, completion: .contentProcessed({ [weak self] (error) in
-                guard let self = self else { return }
-                guard self.lastOpMillis == millis else {
-                    DLog("DenonStreams write completed AFTER timeout")
-                    return
-                }
-                self.lastOpMillis = abs(Date.init().timeIntervalSince1970) * 1000.0
-                self.lock.unlock()
-                if let error = error {
-                    DLog("DenonStreams write ERROR: \(error)")
-                }
-                DispatchQueue.main.async {
-                    completionBlock(error)
-                }
-            }))
+            let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, completionBlock: completionBlock)
+            self.writeQueue.insert(queueItem, at: 0)
+            if hasLock {
+                let _ = self.writeNext()
+            } else {
+                DLog("DenonStreams write: lock busy for \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1))), added to queue. Queue length = \(self.writeQueue.count)")
+            }
         }
     }
 
+    // PRE: ON SELF.WRITEQUEUE, ON SELF.LOCK
+    private func writeNext() -> Bool {
+        guard self.writeQueue.count > 0 else {
+            return false
+        }
+        let queueItem = self.writeQueue.removeLast()
+        if self.dc?.verbose == true {
+            DLog("DenonStreams writeNext: \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1)))")
+        }
+
+        let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
+        self.lastOpMillis = millis
+        self.queue.asyncAfter(deadline: .now() + Self.TIMEOUT_TIME) { [weak self] in
+            guard let self = self else { return }
+            guard self.lastOpMillis == millis else { return }
+            DLog("DenonStreams writeNext TIMEOUT")
+            self.lock.unlock()
+            self.connection.cancel()
+            DispatchQueue.main.async {
+                queueItem.timeoutBlock?()
+            }
+        }
+
+        self.connection.send(content: queueItem.data, completion: .contentProcessed({ [weak self] (error) in
+            guard let self = self else { return }
+            guard self.lastOpMillis == millis else {
+                DLog("DenonStreams writeNext completed AFTER timeout")
+                return
+            }
+            self.lastOpMillis = abs(Date.init().timeIntervalSince1970) * 1000.0
+            if let error = error {
+                DLog("DenonStreams writeNext ERROR: \(error)")
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
+
+                DispatchQueue.main.async {
+                    queueItem.completionBlock(nil, error)
+                }
+                return
+            }
+
+            self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+        }))
+        
+        return true
+    }
+
+    // PRE: ON SELF.LOCK
     // reads until it gets a line that starts with responseLineRegex -- then reads til the end of that line.
     // can be the same line as the command (ie. 0 \r)
-    func readLine(minLength: Int, responseLineRegex: String?, hasLock: Bool = false, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?)->Void) {
+    private func _readLine(minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval, timeoutBlock: (()->Void)?, _ completionBlock: @escaping (String?, Error?)->Void) {
         self.queue.async {
-            if !hasLock {
-                guard self.lock.try() else {
-                    DispatchQueue.main.async { timeoutBlock?() }
-                    return
-                }
-            }
-            
             let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
             self.lastOpMillis = millis
             if let responseLineRegex = responseLineRegex {
                 // check if we already have a hit
                 if let result = self.parseResponse(additionalReceived: nil, responseLineRegex: responseLineRegex) {
-                    self.lock.unlock()
+                    if !self.writeNext() {
+                        self.lock.unlock()
+                    }
                     DispatchQueue.main.async {
-                        completionBlock(result)
+                        completionBlock(result, nil)
                     }
                     return
                 }
             }
 
-            self.queue.asyncAfter(deadline: .now() + self.TIMEOUT_TIME) { [weak self] in
-                guard let self = self else { return }
-                guard self.lastOpMillis == millis else { return }
-                DLog("DenonStreams readLine TIMEOUT")
-                self.lock.unlock()
-                self.receiveWaiter = nil
-                DispatchQueue.main.async { timeoutBlock?() }
-            }
-
             if self.connection.state != .ready {
-                self.lock.unlock()
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
                 DispatchQueue.main.async {
-                    completionBlock(nil)
+                    completionBlock(nil, CommandError.noStream)
                 }
                 return
             }
             
+            self.queue.asyncAfter(deadline: .now() + timeoutTime) { [weak self] in
+                guard let self = self else { return }
+                guard self.lastOpMillis == millis else { return }
+                self.receiveWaiter = nil
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
+                DispatchQueue.main.async {
+                    timeoutBlock?()
+                }
+            }
+
             assert(self.receiveWaiter == nil)
             self.receiveWaiter = { [weak self] (received) in
                 guard let self = self else { return }
@@ -184,34 +226,42 @@ class DenonStreams {
                 // always call parseResponse if we have data, so we don't lose anything
                 let result = self.parseResponse(additionalReceived: received, responseLineRegex: responseLineRegex)
                 guard self.lastOpMillis == millis else {
-                    self.lock.unlock()
+                    if !self.writeNext() {
+                        self.lock.unlock()
+                    }
                     return
                 }
                 self.lastOpMillis = abs(Date.init().timeIntervalSince1970) * 1000.0
                 
                 if let result = result {
-                    self.lock.unlock()
+                    if !self.writeNext() {
+                        self.lock.unlock()
+                    }
                     DispatchQueue.main.async {
-                        completionBlock(result)
+                        completionBlock(result, nil)
                     }
                     return
                 }
                 guard let _ = responseLineRegex else {
-                    self.lock.unlock()
+                    if !self.writeNext() {
+                        self.lock.unlock()
+                    }
                     DispatchQueue.main.async {
-                        completionBlock(received)
+                        completionBlock(received, nil)
                     }
                     return
                 }
                 if let _ = received {
-                    self.readLine(minLength: minLength, responseLineRegex: responseLineRegex, hasLock: true, timeoutBlock: timeoutBlock, completionBlock)
+                    self._readLine(minLength: minLength, responseLineRegex: responseLineRegex, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, completionBlock)
                     return
                 }
                 
                 DLog("DenonStreams readLine - nothing received")
-                self.lock.unlock()
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
                 DispatchQueue.main.async {
-                    completionBlock(nil)
+                    completionBlock(nil, nil)
                 }
             }
         }
@@ -261,10 +311,6 @@ class DenonStreams {
             return retval
         }
         self.unprocessedReceived = (linesNotParsedAsEvents ?? "") + (incomplete ?? "")
-        if let linesNotParsedAsEvents = linesNotParsedAsEvents, self.dc?.verbose == true {
-            DLog("DenonStreams checkIfComplete: unprocessedReceived.count=\(self.unprocessedReceived.count), extra chars:\n")
-            DLog(linesNotParsedAsEvents.replacingOccurrences(of: "\r", with: "\n"))
-        }
         return nil
     }
 }
