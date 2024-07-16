@@ -196,7 +196,7 @@ extension HomeViewController {
     }
     
     func showTips() {
-        let alert = UIAlertController.init(title: "Hawt Tips", message: """
+        let alert = UIAlertController.init(title: "Hawt Tips - v\(versionBuildString)", message: """
 - the buttons are controlling one zone at a time: the main zone (MZ) or zone 2 (Z2)
 
 - tap a volume bar to tell the buttons to start controlling that zone
