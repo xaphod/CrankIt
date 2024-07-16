@@ -30,7 +30,8 @@ class HomeViewController: UIViewController {
     var panSlowly = false {
         didSet {
             let isMuted = self.zone == 2 ? self.denon?.zone2Mute : self.denon?.lastMute
-            if isMuted == true {
+            let isPoweredOff = self.zone == 2 ? self.denon?.zone2Power == false : self.denon?.lastPower == false
+            if isMuted == true || isPoweredOff {
                 return
             }
             let bgView = self.zone == 2 ? self.z2BackgroundView : self.volumeBackgroundView
