@@ -243,10 +243,9 @@ class HomeViewController: UIViewController {
     
     var didEverResign = false
     @objc fileprivate func appDidBecomeActive() {
+        DLog("*** became active")
+        self.denon?.lastBecameActive = Date.init()
         if !self.didEverResign { return }
-        if self.denon?.verbose == true {
-            DLog("appDidBecomeActive() - calling readVolume()")
-        }
         self.denon?.readVolume()
     }
     
@@ -270,6 +269,9 @@ class HomeViewController: UIViewController {
     }
     
     func connectionStateChanged(isConnected: Bool) {
+        if isConnected {
+            DLog("***: hiding coverView, last active = \(abs((self.denon?.lastBecameActive ?? Date.init()).timeIntervalSinceNow))")
+        }
         self.coverView.isHidden = isConnected
         self.updatePowerCoverView()
     }

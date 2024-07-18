@@ -60,7 +60,7 @@ class DenonStreams {
         case .setup:
             DLog("stateUpdateHandler: setup")
         case .ready:
-            DLog("stateUpdateHandler: ready")
+            DLog("stateUpdateHandler: ready (connected), time since app became active = \(abs((self.dc?.lastBecameActive ?? Date.init()).timeIntervalSinceNow))")
             self.receiveLoop()
         @unknown default:
             assert(false)

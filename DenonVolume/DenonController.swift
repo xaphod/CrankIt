@@ -110,7 +110,8 @@ class DenonController {
         }
     }
     var zone2Mute: Bool?
-    
+    var lastBecameActive = Date.init()
+
     init(receiver: Receiver) {
         DLog("DC INIT: ipAddress = \(receiver.ipAddress!)")
         self.host = receiver.ipAddress!
