@@ -169,13 +169,14 @@ class DenonController {
         case.ready:
             let completionBlock = self.connectCompletionBlock
             self.connectCompletionBlock = nil
+            self.hvc?.connectionStateChanged(isConnected: true)
+
             self.readPowerAndZ2State() { (power, _) in
                 guard let power = power else {
                     completionBlock?(nil)
                     return
                 }
                 guard power else {
-                    self.hvc?.connectionStateChanged(isConnected: true)
                     completionBlock?(InitialState.init(poweredOn: false, isMuted: nil, volume: nil))
                     return
                 }
