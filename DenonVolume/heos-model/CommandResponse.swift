@@ -15,7 +15,12 @@ import Foundation
 
 // Example: someone (not us) changed the volume
 // {"heos": {"command": "event/player_volume_changed", "message": "pid=-1320513458&level=40&mute=off"}}
-struct HEOSBase : Codable {
+
+struct HEOSRoot : Codable {
+    var heos: HEOSCommand
+}
+
+struct HEOSCommand : Codable {
     var command: String // what
     var message: String
 }

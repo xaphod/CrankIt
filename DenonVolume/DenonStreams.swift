@@ -15,15 +15,17 @@ class DenonStreams {
     let queue: DispatchQueue
     let lock = NSLock.init()
     let port: Int
-    let commandTerminator: String
+    let commandTerminator: Character
+    let responseTerminator: Character
     private var unprocessedReceived = ""
     static let TIMEOUT_TIME: TimeInterval = 2
     var lastOpMillis: Double = 0
     
     fileprivate var receiveWaiter: ((String?)->Void)?
 
-    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController, commandTerminator: String) {
+    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController, commandTerminator: Character, responseTerminator: Character) {
         self.commandTerminator = commandTerminator
+        self.responseTerminator = responseTerminator
         self.dc = dc
         self.port = port
         let connection = NWConnection.init(host: .init(host), port: .init(integerLiteral: NWEndpoint.Port.IntegerLiteralType(port)), using: .tcp)
@@ -281,8 +283,8 @@ class DenonStreams {
     fileprivate func parseResponse(additionalReceived: String?, responseLineRegex: String?) -> String? {
         let str = self.unprocessedReceived.appending(additionalReceived ?? "")
         self.unprocessedReceived = ""
-        let lineCount = str.reduce(0, { $0 + ($1 == "\r" ? 1 : 0) })
-        var lines = str.split(separator: "\r")
+        let lineCount = str.reduce(0, { $0 + ($1 == self.responseTerminator ? 1 : 0) })
+        var lines = str.split(separator: self.responseTerminator)
         guard lineCount > 0 && lines.count > 0 else {
             self.unprocessedReceived = str
             return nil
@@ -290,7 +292,7 @@ class DenonStreams {
 
         // handle: denon sends MV91, we receive only "blah\rBlah\rMV9" here
         var incomplete: String?
-        if str.last != "\r" {
+        if str.last != self.responseTerminator {
             DLog("DenonStreams\(self.port): incomplete last line case, handling...")
             if self.port == 1255 {
                 DLog("BREAK DEBUG")
@@ -308,9 +310,9 @@ class DenonStreams {
                 sinceLastMatch = nil
                 retval = String.init(line)
             } else if retval != nil, !parsedAsEvent {
-                sinceLastMatch = (sinceLastMatch ?? "") + line + "\r"
+                sinceLastMatch = (sinceLastMatch ?? "") + line + String(self.responseTerminator)
             } else if !parsedAsEvent {
-                linesNotParsedAsEvents = (linesNotParsedAsEvents ?? "") + line + "\r"
+                linesNotParsedAsEvents = (linesNotParsedAsEvents ?? "") + line + String(self.responseTerminator)
             }
         }
 

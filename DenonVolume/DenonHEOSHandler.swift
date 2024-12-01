@@ -24,38 +24,35 @@ class DenonHEOSHandler {
     
     func getPlayers(stream: DenonStreams) {
         self.dc.issueCommand("heos://player/get_players", minLength: 1, responseLineRegex: nil, stream: stream) {
-            DLog("getInitialHEOSState() timeout, no-op")
+            DLog("HEOSHandler getPlayers() timeout, giving up")
         } _: { str, error in
-            guard let str = str, let data = str.data(using: .utf8), let response = try? self.decoder.decode(GetPlayersResponse.self, from: data) else {
+            guard let str = str, let data = str.data(using: .utf8), let response = try? self.decoder.decode(PayloadResponse<HEOSPlayer>.self, from: data) else {
                 assert(false)
                 return
             }
             
             self.pid = response.payload.first?.pid as? Int
-            if let pid = self.pid {
-                DLog("HEOSHandler got pid=\(pid)")
+            guard let pid = self.pid else {
+                return
             }
+            DLog("HEOSHandler getPlayers() success, pid=\(pid)")
+            
+            self.updatePlayState(stream: stream)
         }
     }
     
-    func getBase(_ str: String) -> HEOSBase? {
-        guard let data = str.data(using: .utf8), let base = try? decoder.decode(HEOSBase.self, from: data) else {
-            DLog("DenonHEOSHandler getBase: WARNING, not understood: \(str)")
-            return nil
-        }
-        
-        DLog("**** HEOS getBase command\(base.command) message=\(base.message)")
-        return base
+    func updatePlayState(stream: DenonStreams) {
+        guard let pid = self.pid else { return }
+        self.dc.issueCommand("heos://player/get_now_playing_media?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream, readAfterWrite: false)
     }
     
     func parseResponseHelper(line: String.SubSequence) -> Bool {
-        guard let data = String(line).data(using: .utf8), let base = try? decoder.decode(HEOSBase.self, from: data) else {
+        guard let data = String(line).data(using: .utf8), let base = try? decoder.decode(HEOSRoot.self, from: data) else {
             DLog("DenonHEOSHandler: WARNING, not understood: \(line)")
             return false
         }
-        
-        DLog("**** HEOS command\(base.command) message=\(base.message)")
-        
+
+        DLog("HEOSHandler parseResponseHelper: command=\(base.heos.command) message=\(base.heos.message)")
         return true
     }
 }

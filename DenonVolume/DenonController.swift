@@ -152,8 +152,8 @@ class DenonController {
         self.stream23?.disconnect()
         self.stream1255?.disconnect()
         self.connectCompletionBlock = completionBlock
-        self.stream23 = DenonStreams.init(host: self.host, port: 23, queue: self.queue, dc: self)
-        self.stream1255 = DenonStreams.init(host: self.host, port: 1255, queue: self.queue, dc: self)
+        self.stream23 = DenonStreams.init(host: self.host, port: 23, queue: self.queue, dc: self, commandTerminator: "\r", responseTerminator: "\r")
+        self.stream1255 = DenonStreams.init(host: self.host, port: 1255, queue: self.queue, dc: self, commandTerminator: "\n", responseTerminator: "\r\n")
     }
     
     func connectionStateChanged(stream: DenonStreams, state: NWConnection.State) {
@@ -561,7 +561,7 @@ class DenonController {
         }
     }
     
-    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, stream: DenonStreams, readAfterWrite: Bool = true, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
+    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, stream: DenonStreams, readAfterWrite: Bool = true, timeoutBlock: (()->Void)? = nil, _ completionBlock: CommandStringResponseBlock = nil) {
         guard !self.demoMode else {
             completionBlock?(responseLineRegex, nil)
             return
@@ -571,10 +571,10 @@ class DenonController {
         
         let tBlock = {
             DLog("DC\(stream.port) issueCommand: \(command) TIMED OUT")
-            timeoutBlock()
+            timeoutBlock?()
         }
 
-        stream.writeAndRead((command+stream.commandTerminator).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite) { (str, error) in
+        stream.writeAndRead((command + String(stream.commandTerminator)).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite) { (str, error) in
             if let error = error {
                 DLog("DC\(stream.port) issueCommand: ERROR writing, disconnecting - \(error)")
                 self.disconnect(stream: stream)
