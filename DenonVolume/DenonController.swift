@@ -41,6 +41,8 @@ class DenonController {
     let verbose = false
     #endif
     
+    lazy var heosHandler = DenonHEOSHandler.init(dc: self)
+    
     weak var hvc: HomeViewController?
     
     var maxAllowedSafeVolume: Double {
@@ -226,11 +228,7 @@ class DenonController {
             assert(false)
             return
         }
-        self.issueCommand("heos://player/get_players", minLength: 1, responseLineRegex: nil, stream: stream) {
-            DLog("getInitialHEOSState() timeout, no-op")
-        } _: { str, error in
-            DLog("***** getInitialHEOSState str=\(str), error=\(error)")
-        }
+        self.heosHandler.getPlayers(stream: stream)
     }
     
     fileprivate func getInitialState(powerState: Bool, attempt: Int = 1, _ completionBlock: ConnectCompletionBlock) {
@@ -585,7 +583,7 @@ class DenonController {
             timeoutBlock()
         }
 
-        stream.writeAndRead((command+"\r").data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
+        stream.writeAndRead((command+stream.commandTerminator).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
             if let error = error {
                 DLog("DC\(stream.port) issueCommand: ERROR writing, disconnecting - \(error)")
                 self.disconnect(stream: stream)
@@ -635,8 +633,7 @@ class DenonController {
     func parseResponseHelper(line: String.SubSequence) -> Bool {
         // HEOS
         if line.hasPrefix("{\"heos\"") {
-            NSLog("***** HEOS: \(line)")
-            return true
+            return self.heosHandler.parseResponseHelper(line: line)
         }
         
         // new: handle power state changes

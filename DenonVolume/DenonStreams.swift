@@ -15,13 +15,15 @@ class DenonStreams {
     let queue: DispatchQueue
     let lock = NSLock.init()
     let port: Int
+    let commandTerminator: String
     private var unprocessedReceived = ""
     static let TIMEOUT_TIME: TimeInterval = 2
     var lastOpMillis: Double = 0
     
     fileprivate var receiveWaiter: ((String?)->Void)?
 
-    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController) {
+    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController, commandTerminator: String) {
+        self.commandTerminator = commandTerminator
         self.dc = dc
         self.port = port
         let connection = NWConnection.init(host: .init(host), port: .init(integerLiteral: NWEndpoint.Port.IntegerLiteralType(port)), using: .tcp)
@@ -230,12 +232,6 @@ class DenonStreams {
                 guard let self = self else { return }
 
                 // always call parseResponse if we have data, so we don't lose anything
-                
-                if self === self.dc?.stream1255 {
-                    // TODO: GOT HERE, never receive anything ont his stream for some reason
-                    DLog("**** HEOS STREAM1255 RECEIVED: \(received)")
-                }
-                
                 let result = self.parseResponse(additionalReceived: received, responseLineRegex: responseLineRegex)
                 guard self.lastOpMillis == millis else {
                     if !self.writeNext() {
@@ -293,6 +289,9 @@ class DenonStreams {
         var incomplete: String?
         if str.last != "\r" {
             DLog("DenonStreams\(self.port): incomplete last line case, handling...")
+            if self.port == 1255 {
+                DLog("BREAK DEBUG")
+            }
             incomplete = String(lines.removeLast())
         }
 
