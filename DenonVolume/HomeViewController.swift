@@ -222,7 +222,7 @@ class HomeViewController: UIViewController {
         UIApplication.shared.isIdleTimerDisabled = false
         Logging.debugLabel = nil
         self.denon?.canReconnect = false
-        self.denon?.disconnect()
+        self.denon?.disconnectAll()
         self.denon?.hvc = nil
         self.denon = nil
     }
