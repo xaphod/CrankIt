@@ -17,6 +17,11 @@ class DenonHEOSHandler {
         self.dc = dc
     }
     
+    func heosStreamConnected(stream: DenonStreams) {
+        DLog("heosStreamConnected()")
+        self.getPlayers(stream: stream)
+    }
+    
     func getPlayers(stream: DenonStreams) {
         self.dc.issueCommand("heos://player/get_players", minLength: 1, responseLineRegex: nil, stream: stream) {
             DLog("getInitialHEOSState() timeout, no-op")

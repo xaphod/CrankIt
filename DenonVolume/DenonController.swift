@@ -199,7 +199,7 @@ class DenonController {
                     self.getInitialState(powerState: power, completionBlock)
                 }
             } else if stream === self.stream1255 {
-                self.getInitialHEOSState()
+                self.heosHandler.heosStreamConnected(stream: stream)
             } else {
                 assert(false)
             }
@@ -221,15 +221,6 @@ class DenonController {
     }
     
     // TODO: is minLength not actually used anywhere anymore? Get rid of it!
-    
-    fileprivate func getInitialHEOSState() {
-        DLog("getInitialHEOSState()")
-        guard let stream = self.stream1255 else {
-            assert(false)
-            return
-        }
-        self.heosHandler.getPlayers(stream: stream)
-    }
     
     fileprivate func getInitialState(powerState: Bool, attempt: Int = 1, _ completionBlock: ConnectCompletionBlock) {
         guard !self.demoMode, let stream = self.stream23 else {
@@ -570,7 +561,7 @@ class DenonController {
         }
     }
     
-    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, stream: DenonStreams, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
+    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, stream: DenonStreams, readAfterWrite: Bool = true, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
         guard !self.demoMode else {
             completionBlock?(responseLineRegex, nil)
             return
@@ -583,7 +574,7 @@ class DenonController {
             timeoutBlock()
         }
 
-        stream.writeAndRead((command+stream.commandTerminator).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
+        stream.writeAndRead((command+stream.commandTerminator).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite) { (str, error) in
             if let error = error {
                 DLog("DC\(stream.port) issueCommand: ERROR writing, disconnecting - \(error)")
                 self.disconnect(stream: stream)

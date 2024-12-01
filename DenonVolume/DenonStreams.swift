@@ -117,17 +117,18 @@ class DenonStreams {
         var timeoutBlock: (()->Void)?
         var minLength: Int
         var responseLineRegex: String?
+        var readAfterWrite: Bool
         var completionBlock: (String?, Error?)->Void
     }
     private var writeQueue = [QueueItem]()
 
-    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, _ completionBlock: @escaping (String?, Error?)->Void) {
+    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, readAfterWrite: Bool, _ completionBlock: @escaping (String?, Error?)->Void) {
         self.queue.async {
             let hasLock = self.lock.try()
             if !hasLock, !canQueue {
                 return // drop it
             }
-            let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, completionBlock: completionBlock)
+            let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite, completionBlock: completionBlock)
             self.writeQueue.insert(queueItem, at: 0)
             if hasLock {
                 let _ = self.writeNext()
@@ -179,7 +180,9 @@ class DenonStreams {
                 return
             }
 
-            self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            if queueItem.readAfterWrite {
+                self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            }
         }))
         
         return true
