@@ -96,6 +96,8 @@ class HomeViewController: UIViewController {
     fileprivate var impactFeedbackHeavy: UIImpactFeedbackGenerator!
     fileprivate var selectionFeedback: UISelectionFeedbackGenerator!
 
+    private var masterBottomConstraintTouched = false
+    @IBOutlet weak var masterBottomConstraintForVolumeControls: NSLayoutConstraint?
     @IBOutlet weak var buttonsStackviewCenterYConstraint: NSLayoutConstraint!
     
     @IBOutlet var buttons: [UIButton]!
@@ -667,6 +669,12 @@ class HomeViewController: UIViewController {
         // optionals
         let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
         let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
+        
+        if !self.masterBottomConstraintTouched {
+            self.masterBottomConstraintTouched = true
+            self.masterBottomConstraintForVolumeControls?.constant = 160 // move up volume controls for now playing view
+            self.view.setNeedsLayout()
+        }
         
         // TODO: impl
     }
