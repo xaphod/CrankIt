@@ -609,12 +609,9 @@ class HomeViewController: UIViewController {
         let percentOfFullVolumeRange = (-coords.y / heightRange)
         let amountToAdd = Double(percentOfFullVolumeRange) * ((self.denon?.volumeMax ?? 98) - self.minimumVolume)
         var result = volume + amountToAdd
-        var didHeavy = false
         if self.volumeIsMax(result) {
-            didHeavy = true
             self.impactFeedbackHeavy.impactOccurred()
         } else if ((result-2.0)...result).contains(self.minimumVolume) {
-            didHeavy = true
             self.impactFeedbackHeavy.impactOccurred()
         }
         result = min(result, self.denon?.maxAllowedSafeVolume ?? self.denon?.volumeMax ?? 98)
@@ -632,9 +629,6 @@ class HomeViewController: UIViewController {
             }
             if let v = v, v != result {
                 DLog("HVC handlePan setVolume: mismatch \(v) != \(result)")
-            }
-            if let _ = v, !didHeavy {
-                self.selectionFeedback?.selectionChanged()
             }
             self.volumeLastSetInPan = v
             self.updateVolume(v, isZone2: isZone2)
