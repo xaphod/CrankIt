@@ -206,6 +206,7 @@ class HomeViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(self.appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.appWillResignActive), name: UIApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.volumeChangedByButtons(notification:)), name: .volumeChangedByButton, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.nowPlayingChanged(notification:)), name: .nowPlayingChanged, object: nil)
         Logging.debugLabelAll = false
         Logging.debugLabel = self.debugLabel
         UIApplication.shared.isIdleTimerDisabled = true
@@ -650,6 +651,24 @@ class HomeViewController: UIViewController {
         case .zeroBottom:
             return "\(vol)"
         }
+    }
+    
+    // NOW PLAYING
+    @objc func nowPlayingChanged(notification: Notification) {
+        guard
+            let userInfo = notification.userInfo,
+            let song = userInfo[NowPlayingMediaNotificationKeys.song],
+            let artist = userInfo[NowPlayingMediaNotificationKeys.artist]
+        else {
+            assert(false)
+            return
+        }
+        
+        // optionals
+        let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
+        let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
+        
+        // TODO: impl
     }
 }
 
