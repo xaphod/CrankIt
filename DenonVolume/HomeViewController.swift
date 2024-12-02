@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import SDWebImage
 
 class HomeViewController: UIViewController {
     var zone: Int {
@@ -134,6 +135,10 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var multiEqButton: UIButton!
     @IBOutlet weak var zoneSegment: UISegmentedControl!
     
+    // HEOS
+    fileprivate weak var heosStackview: UIStackView?
+    fileprivate weak var heosImageview: UIImageView?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         DLog("UIScreen.main height = \(UIScreen.main.bounds.height)")
@@ -210,7 +215,7 @@ class HomeViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(self.volumeChangedByButtons(notification:)), name: .volumeChangedByButton, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.nowPlayingChanged(notification:)), name: .nowPlayingChanged, object: nil)
         Logging.debugLabelAll = false
-        Logging.debugLabel = self.debugLabel
+//        Logging.debugLabel = self.debugLabel
         UIApplication.shared.isIdleTimerDisabled = true
         self.denon?.hvc = self
         self.updateStackviewConstraints()
@@ -670,13 +675,50 @@ class HomeViewController: UIViewController {
         let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
         let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
         
-        if !self.masterBottomConstraintTouched {
-            self.masterBottomConstraintTouched = true
-            self.masterBottomConstraintForVolumeControls?.constant = 160 // move up volume controls for now playing view
-            self.view.setNeedsLayout()
+        self.addHEOSDisplayComponents()
+
+        self.heosImageview?.sd_setImage(with: mediaUrl)
+    }
+    
+    private func addHEOSDisplayComponents() {
+        if self.masterBottomConstraintTouched {
+            return
         }
+        self.masterBottomConstraintTouched = true
+        let height: CGFloat = 160
+        self.masterBottomConstraintForVolumeControls?.constant = height // move up volume controls for now playing view
         
-        // TODO: impl
+        // HORIZONTAL stackview
+        let container = UIStackView.init()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.axis = .horizontal
+        container.distribution = .fill
+        container.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(container)
+        self.heosStackview = container
+        var constraints = [
+            container.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 18),
+            container.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
+            container.trailingAnchor.constraint(equalTo: self.buttonsStackview.leadingAnchor, constant: -18),
+            container.heightAnchor.constraint(equalToConstant: height - 14)
+        ]
+        
+        let imageview = UIImageView.init()
+        container.addArrangedSubview(imageview)
+        self.heosImageview = imageview
+        constraints += [
+            imageview.widthAnchor.constraint(equalTo: imageview.heightAnchor, multiplier: 1),
+        ]
+        
+        // controls view
+        let controlView = UIView.init()
+        container.addArrangedSubview(controlView)
+        
+        
+        
+        NSLayoutConstraint.activate(constraints)
+        self.view.setNeedsLayout()
+        self.view.layoutIfNeeded()
     }
 }
 
