@@ -19,25 +19,31 @@ class DenonHEOSHandler {
     
     func heosStreamConnected(stream: DenonStreams) {
         DLog("heosStreamConnected()")
-        self.getPlayers(stream: stream)
+        self.getPlayers(stream: stream) { success in
+            guard success else { return }
+            self.dc.issueCommand("heos://system/register_for_change_events?enable=on", minLength: 1, responseLineRegex: nil, stream: stream, readAfterWrite: false)
+        }
     }
     
-    func getPlayers(stream: DenonStreams) {
+    func getPlayers(stream: DenonStreams, _ completionBlock: @escaping (Bool)->Void) {
         self.dc.issueCommand("heos://player/get_players", minLength: 1, responseLineRegex: nil, stream: stream) {
             DLog("HEOSHandler getPlayers() timeout, giving up")
         } _: { str, error in
             guard let str = str, let data = str.data(using: .utf8), let response = try? self.decoder.decode(PayloadArrayResponse<HEOSPlayer>.self, from: data) else {
                 assert(false)
+                completionBlock(false)
                 return
             }
             
             self.pid = response.payload.first?.pid as? Int
             guard let pid = self.pid else {
+                completionBlock(false)
                 return
             }
             DLog("HEOSHandler getPlayers() success, pid=\(pid)")
             
             self.updatePlayState(stream: stream)
+            completionBlock(true)
         }
     }
     

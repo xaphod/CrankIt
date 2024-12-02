@@ -184,6 +184,10 @@ class DenonStreams {
 
             if queueItem.readAfterWrite {
                 self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            } else {
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
             }
         }))
         
