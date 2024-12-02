@@ -99,7 +99,6 @@ class HomeViewController: UIViewController {
 
     private var masterBottomConstraintTouched = false
     @IBOutlet weak var masterBottomConstraintForVolumeControls: NSLayoutConstraint?
-    @IBOutlet weak var buttonsStackviewCenterYConstraint: NSLayoutConstraint!
     
     @IBOutlet var buttons: [UIButton]!
     @IBOutlet weak var muteButton: UIButton!
@@ -121,7 +120,7 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var volumeLabel: UILabel!
     @IBOutlet weak var volButtonHigh: UIButton!
     @IBOutlet weak var volButtonMed: UIButton?
-    @IBOutlet weak var volButtonLow: UIButton!
+    @IBOutlet weak var volButtonLow: UIButton?
     @IBOutlet weak var powerButton: UIButton!
     @IBOutlet weak var powerCoverView: UIView!
     @IBOutlet weak var powerCoverButton: UIButton!
@@ -146,13 +145,9 @@ class HomeViewController: UIViewController {
         if UIScreen.main.bounds.height < 665 { // iPhone SE1 / iphone 5S: 568
             self.buttonsStackview.spacing = 10
             self.volButtonMed?.removeFromSuperview()
-            self.buttonsStackviewCenterYConstraint.constant = 23 // shift downwards
         } else if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
             self.buttonsStackview.spacing = 20
             self.volButtonMed?.removeFromSuperview()
-            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
-        } else {
-            self.buttonsStackviewCenterYConstraint.constant = 26 // shift downwards
         }
         
         self.debugLabel.text = ""
@@ -186,8 +181,8 @@ class HomeViewController: UIViewController {
             self.z2VolumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.surroundModeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
-            self.volButtonLow.setTitle(nil, for: .normal)
-            self.volButtonLow.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
+            self.volButtonLow?.setTitle(nil, for: .normal)
+            self.volButtonLow?.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
             self.volButtonMed?.setTitle(nil, for: .normal)
             self.volButtonMed?.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
             self.volButtonHigh.setTitle(nil, for: .normal)
@@ -305,7 +300,7 @@ class HomeViewController: UIViewController {
         self.z2BackgroundView.backgroundColor = Colors.tint
         self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.z2ForegroundView.backgroundColor = Colors.reverseTint
-        self.volButtonLow.backgroundColor = Colors.green
+        self.volButtonLow?.backgroundColor = Colors.green
         self.volButtonMed?.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
     }
@@ -684,6 +679,10 @@ class HomeViewController: UIViewController {
         let height: CGFloat = 140
         self.masterBottomConstraintForVolumeControls?.constant = height // move up volume controls for now playing view
         
+        // remove two butons from main/right buttons so the power button isn't right near heos controls
+        self.volButtonMed?.removeFromSuperview()
+        self.volButtonLow?.removeFromSuperview()
+        
         // HORIZONTAL stackview
         let container = UIStackView.init()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -696,7 +695,9 @@ class HomeViewController: UIViewController {
         var constraints = [
             container.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 18),
             container.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
-            container.trailingAnchor.constraint(equalTo: self.buttonsStackview.leadingAnchor, constant: -18),
+            container.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -18),
+            
+            // container.trailingAnchor.constraint(equalTo: self.buttonsStackview.leadingAnchor, constant: -18),
             container.heightAnchor.constraint(equalToConstant: height - 14)
         ]
         
