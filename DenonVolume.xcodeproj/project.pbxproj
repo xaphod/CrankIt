@@ -37,6 +37,7 @@
 		1C1384069BA28A49C17622EC /* Pods-DenonVolume.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DenonVolume.release.xcconfig"; path = "Target Support Files/Pods-DenonVolume/Pods-DenonVolume.release.xcconfig"; sourceTree = "<group>"; };
 		222CF7EF245A1E84002155D9 /* DenonStreams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenonStreams.swift; sourceTree = "<group>"; };
 		225D70C12CFCF028004855BE /* DenonHEOSHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenonHEOSHandler.swift; sourceTree = "<group>"; };
+		225D70E02CFE6720004855BE /* DenonVolume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DenonVolume.entitlements; sourceTree = "<group>"; };
 		227F7182245D04430029D8C9 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		2292CC9E245996FC0063D7AD /* DenonVolume.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DenonVolume.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2292CCA1245996FC0063D7AD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -105,6 +106,7 @@
 		2292CCA0245996FC0063D7AD /* DenonVolume */ = {
 			isa = PBXGroup;
 			children = (
+				225D70E02CFE6720004855BE /* DenonVolume.entitlements */,
 				22C77D6F2460F4BD00EA3F2C /* silence-1min.mp3 */,
 				22E1C6E92466203B00A16377 /* sweep.mp3 */,
 				2292DA70245D1F66009D0BEC /* GoogleService-Info.plist */,
@@ -456,6 +458,7 @@
 			baseConfigurationReference = 094FFBA25CB86F6EA79E246D /* Pods-DenonVolume.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = DenonVolume/DenonVolume.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = V8U8V7848Z;
 				INFOPLIST_FILE = DenonVolume/Info.plist;
@@ -475,6 +478,7 @@
 			baseConfigurationReference = 1C1384069BA28A49C17622EC /* Pods-DenonVolume.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = DenonVolume/DenonVolume.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = V8U8V7848Z;
 				INFOPLIST_FILE = DenonVolume/Info.plist;
