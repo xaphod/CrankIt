@@ -81,18 +81,6 @@
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="1000" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1pr-tJ-CLc">
-                                <rect key="frame" x="20" y="30.5" width="96.5" height="35"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="15"/>
-                                <inset key="contentEdgeInsets" minX="0.0" minY="8" maxX="8" maxY="8"/>
-                                <inset key="titleEdgeInsets" minX="8" minY="0.0" maxX="-8" maxY="0.0"/>
-                                <state key="normal" title="Discovery" image="magnifyingglass" catalog="system">
-                                    <color key="titleColor" systemColor="linkColor"/>
-                                </state>
-                                <connections>
-                                    <action selector="discoveryPressed:" destination="Mxy-Vh-eFF" eventType="touchUpInside" id="4kz-qQ-jlI"/>
-                                </connections>
-                            </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="uGd-9l-4E8">
                                 <rect key="frame" x="199" y="30.5" width="101" height="35"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="15"/>
@@ -432,10 +420,8 @@
                             <constraint firstItem="53P-Au-pbN" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="UgP-nY-cHd" secondAttribute="trailing" constant="8" id="qdI-0C-cbz"/>
                             <constraint firstItem="FIy-L5-Nmg" firstAttribute="trailing" secondItem="7Td-WW-0hE" secondAttribute="trailing" id="qe6-zz-Hfx"/>
                             <constraint firstAttribute="trailing" secondItem="aak-OB-5s6" secondAttribute="trailing" id="reT-uC-5wp"/>
-                            <constraint firstItem="1pr-tJ-CLc" firstAttribute="leading" secondItem="53P-Au-pbN" secondAttribute="leading" constant="20" id="sTl-mH-Wut"/>
                             <constraint firstItem="7Td-WW-0hE" firstAttribute="top" secondItem="QQd-cp-MAq" secondAttribute="bottom" constant="13" id="uqe-7k-MzJ"/>
                             <constraint firstAttribute="trailing" secondItem="QST-6d-7xT" secondAttribute="trailing" id="uzX-he-kvT"/>
-                            <constraint firstItem="1pr-tJ-CLc" firstAttribute="centerY" secondItem="QQd-cp-MAq" secondAttribute="centerY" id="wHc-Vs-KOz"/>
                             <constraint firstAttribute="bottom" secondItem="QST-6d-7xT" secondAttribute="bottom" id="xCw-3r-8ze"/>
                         </constraints>
                         <connections>
@@ -461,7 +447,6 @@
                         <outlet property="powerButton" destination="XNy-fp-xBm" id="J0A-es-WLB"/>
                         <outlet property="powerCoverButton" destination="v3Y-Cq-KUp" id="93C-01-WSP"/>
                         <outlet property="powerCoverView" destination="QST-6d-7xT" id="zdy-GL-s0c"/>
-                        <outlet property="searchButton" destination="1pr-tJ-CLc" id="ltC-Sm-CME"/>
                         <outlet property="settingsButton" destination="uGd-9l-4E8" id="OdV-tp-eVA"/>
                         <outlet property="sourcesButton" destination="TpI-nD-ZFV" id="JzV-G2-2RA"/>
                         <outlet property="surroundModeLabel" destination="JsO-nP-C3v" id="2wk-FQ-jKg"/>

@@ -27,6 +27,9 @@ extension HomeViewController {
             volStyleDesc = "dB"
         }
 
+        alert.addAction(UIAlertAction.init(title: "Search for receivers", style: .default, handler: { _ in
+            self.navigationController?.popViewController(animated: true)
+        }))
         alert.addAction(UIAlertAction.init(title: "Change volume limit (\(self.denon?.maxAllowedSafeVolume ?? 80))", style: .default, handler: { (_) in
             self.changeVolumeLimit()
         }))

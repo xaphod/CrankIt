@@ -129,7 +129,6 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var limitLineView: UIView!
     @IBOutlet weak var debugLabel: UILabel!
     @IBOutlet weak var coverView: UIView!
-    @IBOutlet weak var searchButton: UIButton!
     @IBOutlet weak var sourcesButton: UIButton!
     @IBOutlet weak var settingsButton: UIButton!
     @IBOutlet weak var multiEqButton: UIButton!
@@ -179,7 +178,6 @@ class HomeViewController: UIViewController {
         
         if #available(iOS 13.0, *) {
             self.multiEqButton.setTitle(nil, for: .normal)
-            self.searchButton.setTitle(nil, for: .normal)
             self.settingsButton.setTitle(nil, for: .normal)
             self.debugLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
@@ -297,8 +295,6 @@ class HomeViewController: UIViewController {
             $0.tintColor = Colors.tint
             $0.setTitleColor(Colors.tint, for: .normal)
         }
-        self.searchButton.tintColor = Colors.reverseTint
-        self.searchButton.setTitleColor(Colors.reverseTint, for: .normal)
         self.settingsButton.tintColor = Colors.reverseTint
         self.settingsButton.setTitleColor(Colors.reverseTint, for: .normal)
         self.volumeBackgroundView.backgroundColor = Colors.tint
@@ -327,10 +323,6 @@ class HomeViewController: UIViewController {
     
     @IBAction func reconnectPressed(_ sender: Any) {
         self.startConnection()
-    }
-    
-    @IBAction func discoveryPressed(_ sender: Any) {
-        self.navigationController?.popViewController(animated: true)
     }
     
     @IBAction func settingsButtonPressed(_ sender: UIButton) {
