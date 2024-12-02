@@ -137,7 +137,9 @@ class HomeViewController: UIViewController {
     // HEOS
     fileprivate weak var heosStackview: UIStackView?
     fileprivate weak var heosImageview: UIImageView?
-    
+    fileprivate weak var heosTopLabel: UILabel?
+    fileprivate weak var heosBottomLabel: UILabel?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         DLog("UIScreen.main height = \(UIScreen.main.bounds.height)")
@@ -656,8 +658,8 @@ class HomeViewController: UIViewController {
     @objc func nowPlayingChanged(notification: Notification) {
         guard
             let userInfo = notification.userInfo,
-            let song = userInfo[NowPlayingMediaNotificationKeys.song],
-            let artist = userInfo[NowPlayingMediaNotificationKeys.artist]
+            let song = userInfo[NowPlayingMediaNotificationKeys.song] as? String,
+            let artist = userInfo[NowPlayingMediaNotificationKeys.artist] as? String
         else {
             assert(false)
             return
@@ -670,6 +672,8 @@ class HomeViewController: UIViewController {
         self.addHEOSDisplayComponents()
 
         self.heosImageview?.sd_setImage(with: mediaUrl)
+        self.heosTopLabel?.text = artist
+        self.heosBottomLabel?.text = song
     }
     
     private func addHEOSDisplayComponents() {
@@ -677,7 +681,7 @@ class HomeViewController: UIViewController {
             return
         }
         self.masterBottomConstraintTouched = true
-        let height: CGFloat = 160
+        let height: CGFloat = 140
         self.masterBottomConstraintForVolumeControls?.constant = height // move up volume controls for now playing view
         
         // HORIZONTAL stackview
@@ -685,6 +689,7 @@ class HomeViewController: UIViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
         container.axis = .horizontal
         container.distribution = .fill
+        container.spacing = 6
         container.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(container)
         self.heosStackview = container
@@ -702,11 +707,33 @@ class HomeViewController: UIViewController {
             imageview.widthAnchor.constraint(equalTo: imageview.heightAnchor, multiplier: 1),
         ]
         
-        // controls view
-        let controlView = UIView.init()
-        container.addArrangedSubview(controlView)
-        
-        
+        // rightView has labels, controls
+        let rightView = UIView.init()
+        container.addArrangedSubview(rightView)
+
+        let topLabel = UILabel.init()
+        topLabel.translatesAutoresizingMaskIntoConstraints = false
+        let bottomLabel = UILabel.init()
+        bottomLabel.translatesAutoresizingMaskIntoConstraints = false
+        if #available(iOS 13.0, *) {
+            topLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            bottomLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        } else {
+            topLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+            bottomLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        }
+        rightView.addSubview(topLabel)
+        rightView.addSubview(bottomLabel)
+        self.heosTopLabel = topLabel
+        self.heosBottomLabel = bottomLabel
+        constraints += [
+            bottomLabel.bottomAnchor.constraint(equalTo: rightView.bottomAnchor, constant: 1),
+            bottomLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 0),
+            bottomLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
+            topLabel.bottomAnchor.constraint(equalTo: bottomLabel.topAnchor, constant: -4),
+            topLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 0),
+            topLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
+        ]
         
         NSLayoutConstraint.activate(constraints)
         self.view.setNeedsLayout()
