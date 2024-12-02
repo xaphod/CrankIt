@@ -621,10 +621,10 @@ class DenonController {
     
     // handle side-effects of parsing output that wasn't asked for
     // NOT ON MAIN THREAD
-    func parseResponseHelper(line: String.SubSequence) -> Bool {
+    func parseResponseHelper(line: String.SubSequence, stream: DenonStreams) -> Bool {
         // HEOS
         if line.hasPrefix("{\"heos\"") {
-            return self.heosHandler.parseResponseHelper(line: line)
+            return self.heosHandler.parseResponseHelper(line: line, stream: stream)
         }
         
         // new: handle power state changes

@@ -12,6 +12,7 @@ class DenonHEOSHandler {
     let decoder = JSONDecoder.init()
     var dc: DenonController!
     var pid: Int?
+    private var didRegisterChangeEvents = false
     
     init(dc: DenonController) {
         self.dc = dc
@@ -19,31 +20,25 @@ class DenonHEOSHandler {
     
     func heosStreamConnected(stream: DenonStreams) {
         DLog("heosStreamConnected()")
-        self.getPlayers(stream: stream) { success in
-            guard success else { return }
-            self.dc.issueCommand("heos://system/register_for_change_events?enable=on", minLength: 1, responseLineRegex: nil, stream: stream, readAfterWrite: false)
-        }
+        self.getPlayers(stream: stream)
     }
     
-    func getPlayers(stream: DenonStreams, _ completionBlock: @escaping (Bool)->Void) {
+    func getPlayers(stream: DenonStreams) {
         self.dc.issueCommand("heos://player/get_players", minLength: 1, responseLineRegex: nil, stream: stream) {
             DLog("HEOSHandler getPlayers() timeout, giving up")
         } _: { str, error in
             guard let str = str, let data = str.data(using: .utf8), let response = try? self.decoder.decode(PayloadArrayResponse<HEOSPlayer>.self, from: data) else {
                 assert(false)
-                completionBlock(false)
                 return
             }
             
             self.pid = response.payload.first?.pid as? Int
             guard let pid = self.pid else {
-                completionBlock(false)
                 return
             }
             DLog("HEOSHandler getPlayers() success, pid=\(pid)")
             
             self.updatePlayState(stream: stream)
-            completionBlock(true)
         }
     }
     
@@ -52,7 +47,7 @@ class DenonHEOSHandler {
         self.dc.issueCommand("heos://player/get_now_playing_media?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream, readAfterWrite: false)
     }
     
-    func parseResponseHelper(line: String.SubSequence) -> Bool {
+    func parseResponseHelper(line: String.SubSequence, stream: DenonStreams) -> Bool {
         guard let data = String(line).data(using: .utf8), let base = try? decoder.decode(HEOSRoot.self, from: data) else {
             // could be a partial line that we get more from & complete later
             // probably want to remove this log line when that's confirmed
@@ -75,6 +70,10 @@ class DenonHEOSHandler {
                 }
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(name: .nowPlayingChanged, object: nil, userInfo: userInfo)
+                }
+                if !didRegisterChangeEvents {
+                    didRegisterChangeEvents = true
+                    self.dc.issueCommand("heos://system/register_for_change_events?enable=on", minLength: 1, responseLineRegex: nil, stream: stream, readAfterWrite: false)
                 }
             }
             

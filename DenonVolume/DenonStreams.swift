@@ -309,7 +309,7 @@ class DenonStreams {
         var sinceLastMatch: String?
         for i in 0..<lines.count {
             let line = lines[i]
-            let parsedAsEvent = self.dc?.parseResponseHelper(line: line) == true
+            let parsedAsEvent = self.dc?.parseResponseHelper(line: line, stream: self) == true
             if let responseLineRegex = responseLineRegex, line.range(of: responseLineRegex, options: .regularExpression) != nil {
                 sinceLastMatch = nil
                 retval = String.init(line)
