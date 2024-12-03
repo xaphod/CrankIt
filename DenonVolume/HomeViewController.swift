@@ -689,8 +689,10 @@ class HomeViewController: UIViewController {
         self.masterBottomConstraintForVolumeControls?.constant = height // move up volume controls for now playing view
         
         // remove two butons from main/right buttons so the power button isn't right near heos controls
-        self.volButtonMed?.removeFromSuperview()
-        self.volButtonLow?.removeFromSuperview()
+        if UIDevice.current.userInterfaceIdiom != .pad {
+            self.volButtonMed?.removeFromSuperview()
+            self.volButtonLow?.removeFromSuperview()
+        }
         
         // HORIZONTAL stackview
         let container = UIStackView.init()
@@ -702,12 +704,10 @@ class HomeViewController: UIViewController {
         self.view.insertSubview(container, belowSubview: self.powerCoverView)
         self.heosStackview = container
         var constraints = [
-            container.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 18),
-            container.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: 0),
-            container.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -18),
-            
-            // container.trailingAnchor.constraint(equalTo: self.buttonsStackview.leadingAnchor, constant: -18),
-            container.heightAnchor.constraint(equalToConstant: height - 14)
+            container.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 8),
+            container.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            container.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -8),
+            container.heightAnchor.constraint(equalToConstant: height - 18)
         ]
         
         let albumView = UIView.init()
@@ -769,7 +769,7 @@ class HomeViewController: UIViewController {
         let prevButton = UIButton.init()
         prevButton.translatesAutoresizingMaskIntoConstraints = false
         prevButton.layer.cornerRadius = 26
-        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_tintedImage(with: .white), for: .normal)
+        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
         prevButton.addTarget(self, action: #selector(self.prevButtonPressed(_:)), for: .touchUpInside)
         constraints.append(prevButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(prevButton)
@@ -777,7 +777,7 @@ class HomeViewController: UIViewController {
         let playButton = UIButton.init()
         playButton.translatesAutoresizingMaskIntoConstraints = false
         playButton.layer.cornerRadius = 26
-        playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: .white), for: .normal)
+        playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
         playButton.addTarget(self, action: #selector(self.playPauseButtonPressed(_:)), for: .touchUpInside)
         constraints.append(playButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(playButton)
@@ -786,7 +786,7 @@ class HomeViewController: UIViewController {
         let nextButton = UIButton.init()
         nextButton.translatesAutoresizingMaskIntoConstraints = false
         nextButton.layer.cornerRadius = 26
-        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_tintedImage(with: .white), for: .normal)
+        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
         nextButton.addTarget(self, action: #selector(self.nextButtonPressed(_:)), for: .touchUpInside)
         constraints.append(nextButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(nextButton)
@@ -831,9 +831,9 @@ class HomeViewController: UIViewController {
     func updatePlayPauseButton(playState: DenonHEOSHandler.PlayState) {
         guard let playButton = self.heosPlayButton else { return }
         if playState == .play {
-            playButton.setImage(UIImage.init(named: "pause-circle")!.sd_tintedImage(with: .white), for: .normal)
+            playButton.setImage(UIImage.init(named: "pause-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
         } else {
-            playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: .white), for: .normal)
+            playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
         }
     }
     
