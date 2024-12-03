@@ -9,6 +9,13 @@
 import Foundation
 
 class DenonHEOSHandler {
+    enum PlayState : String {
+        case pause
+        case play
+        case stop
+    }
+    var playState = PlayState.pause
+    
     let decoder = JSONDecoder.init()
     var dc: DenonController!
     var pid: Int?
@@ -38,11 +45,11 @@ class DenonHEOSHandler {
             }
             DLog("HEOSHandler getPlayers() success, pid=\(pid)")
             
-            self.updatePlayState(stream: stream)
+            self.getNowPlayingMedia(stream: stream)
         }
     }
     
-    func updatePlayState(stream: DenonStreams) {
+    func getNowPlayingMedia(stream: DenonStreams) {
         guard let pid = self.pid else { return }
         self.dc.issueCommand("heos://player/get_now_playing_media?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream, readAfterWrite: false)
     }
@@ -106,12 +113,18 @@ class DenonHEOSHandler {
              ("{\"heos\": {\"command\": \"event/player_state_changed\", \"message\": \"pid=-1320513458&state=pause\"}}\r\n")
              */
             let parts = self.parseMessageParts(base.heos.message)
-            guard let p = parts["pid"] as? String, Int(p) == self.pid, let state = parts["state"] as? String else {
+            guard let p = parts["pid"], Int(p) == self.pid, let state = parts["state"], let playState = PlayState.init(rawValue: state) else {
                 assert(false)
                 return true
             }
-            self.dc.hvc?.updatePlayPauseButton(isPause: state != "play") // so stop=pause
+            DispatchQueue.main.async {
+                self.playState = playState
+                self.dc.hvc?.updatePlayPauseButton(playState: playState) // so stop=pause
+            }
             
+        case "event/player_now_playing_changed":
+            self.getNowPlayingMedia(stream: stream)
+
         default:
             DLog("DenonHEOSHandler: \(base.heos.command) is not yet handled")
         }
@@ -120,13 +133,13 @@ class DenonHEOSHandler {
         return true
     }
     
-    private func parseMessageParts(_ message: String) -> [String:Any] {
+    private func parseMessageParts(_ message: String) -> [String:String] {
         // break pid=-1320513458&state=pause into [pid:-1320513458, state:pause]
         let tuples = message.split(separator: "&")
         return tuples.reduce([:]) { acc, cur in
             let t = cur.split(separator: "=")
             var acc = acc
-            acc[String(t[0])] = t[1]
+            acc[String(t[0])] = String(t[1])
             return acc
         }
     }
