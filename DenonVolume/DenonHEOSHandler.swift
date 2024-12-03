@@ -6,7 +6,7 @@
 //  Copyright © 2024 Solodigitalis. All rights reserved.
 //
 
-import Foundation
+import UIKit
 
 class DenonHEOSHandler {
     enum PlayState : String {
@@ -23,6 +23,17 @@ class DenonHEOSHandler {
     
     init(dc: DenonController) {
         self.dc = dc
+        NotificationCenter.default.addObserver(self, selector: #selector(self.didBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc func didBecomeActive() {
+        guard let stream = self.dc.stream1255 else { return }
+        DLog("HEOSHandler didBecomeActive()")
+        self.getNowPlayingMedia(stream: stream)
     }
     
     func heosStreamConnected(stream: DenonStreams) {
