@@ -235,6 +235,8 @@ class HomeViewController: UIViewController {
         super.traitCollectionDidChange(previousTraitCollection)
         guard UIApplication.shared.applicationState != .background else { return }
         self.setColors()
+        self.updateMuteState(isZone2: false)
+        self.updateMuteState(isZone2: true)
     }
     
     override func viewDidLayoutSubviews() {
@@ -299,8 +301,11 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.volumeForegroundView.backgroundColor = Colors.reverseTint
         self.z2BackgroundView.backgroundColor = Colors.tint
-        self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
-        self.z2ForegroundView.backgroundColor = Colors.reverseTint
+        
+        // assume zone 2 is off until we learn it isn't
+        self.z2BackgroundView.layer.borderColor = Colors.darkGray.cgColor
+        self.z2ForegroundView.backgroundColor = Colors.darkGray
+        
         self.volButtonLow?.backgroundColor = Colors.green
         self.volButtonMed?.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
