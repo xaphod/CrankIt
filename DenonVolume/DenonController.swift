@@ -41,6 +41,8 @@ class DenonController {
     let verbose = false
     #endif
     
+    lazy var heosHandler = DenonHEOSHandler.init(dc: self)
+    
     weak var hvc: HomeViewController?
     
     var maxAllowedSafeVolume: Double {
@@ -91,7 +93,8 @@ class DenonController {
             self.hvc?.updateVolume(self.zone2Volume, isZone2: true)
         }
     }
-    var streams: DenonStreams?
+    var stream23: DenonStreams?
+    var stream1255: DenonStreams?
     let host: String
     let receiver: Receiver
     var demoMode = false
@@ -146,41 +149,59 @@ class DenonController {
             return
         }
 
-        self.streams?.disconnect()
+        self.stream23?.disconnect()
+        self.stream1255?.disconnect()
         self.connectCompletionBlock = completionBlock
-        self.streams = DenonStreams.init(host: self.host, port: 23, queue: self.queue, dc: self)
+        self.stream23 = DenonStreams.init(host: self.host, port: 23, queue: self.queue, dc: self, commandTerminator: "\r", responseTerminator: "\r")
+        self.stream1255 = DenonStreams.init(host: self.host, port: 1255, queue: self.queue, dc: self, commandTerminator: "\n", responseTerminator: "\r\n")
     }
     
-    func connectionStateChanged(state: NWConnection.State) {
+    func connectionStateChanged(stream: DenonStreams, state: NWConnection.State) {
         switch state {
         case .cancelled, .failed(_):
-            self.streams?.dc = nil
-            self.streams = nil
-            self.hvc?.connectionStateChanged(isConnected: false)
-            if self.canReconnect {
-                DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
-                    self?.connect()
+            if stream === self.stream23 {
+                self.stream23?.dc = nil
+                self.stream23 = nil
+
+                self.hvc?.connectionStateChanged(isConnected: false)
+                if self.canReconnect {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
+                        self?.connect()
+                    }
                 }
+            } else if stream === self.stream1255 {
+                self.stream1255?.dc = nil
+                self.stream1255 = nil
+            } else {
+                assert(false)
             }
 
         case .waiting(_):
-            self.hvc?.connectionStateChanged(isConnected: false)
+            if stream === self.stream23 {
+                self.hvc?.connectionStateChanged(isConnected: false)
+            }
 
         case.ready:
-            let completionBlock = self.connectCompletionBlock
-            self.connectCompletionBlock = nil
-            self.hvc?.connectionStateChanged(isConnected: true)
-
-            self.readPowerAndZ2State() { (power, _) in
-                guard let power = power else {
-                    completionBlock?(nil)
-                    return
+            if stream === self.stream23 {
+                let completionBlock = self.connectCompletionBlock
+                self.connectCompletionBlock = nil
+                self.hvc?.connectionStateChanged(isConnected: true)
+                
+                self.readPowerAndZ2State() { (power, _) in
+                    guard let power = power else {
+                        completionBlock?(nil)
+                        return
+                    }
+                    guard power else {
+                        completionBlock?(InitialState.init(poweredOn: false, isMuted: nil, volume: nil))
+                        return
+                    }
+                    self.getInitialState(powerState: power, completionBlock)
                 }
-                guard power else {
-                    completionBlock?(InitialState.init(poweredOn: false, isMuted: nil, volume: nil))
-                    return
-                }
-                self.getInitialState(powerState: power, completionBlock)
+            } else if stream === self.stream1255 {
+                self.heosHandler.heosStreamConnected(stream: stream)
+            } else {
+                assert(false)
             }
 
         default: break
@@ -199,8 +220,10 @@ class DenonController {
         return InitialState.init(poweredOn: true, isMuted: false, volume: 50, source: self.lastSource)
     }
     
+    // TODO: is minLength not actually used anywhere anymore? Get rid of it!
+    
     fileprivate func getInitialState(powerState: Bool, attempt: Int = 1, _ completionBlock: ConnectCompletionBlock) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(self.demoModeInitialState())
             return
         }
@@ -216,14 +239,14 @@ class DenonController {
                         completionBlock?(InitialState.init(poweredOn: powerState, isMuted: muted, volume: vol, source: source))
                         
                         // after completionBlock, cuz we don't wanna wait for it
-                        self.issueCommand("MS?", minLength: 3, responseLineRegex: "MS.+", timeoutBlock: {
+                        self.issueCommand("MS?", minLength: 3, responseLineRegex: "MS.+", stream: stream, timeoutBlock: {
                             self.readMultiEQState()
                         }) { (_, _) in
                             self.readMultiEQState()
                         }
                         return
                     }
-                    if self.streams?.connection.state == .ready, attempt <= 3 {
+                    if self.stream23?.connection.state == .ready, attempt <= 3 {
                         DLog("DC getInitialState: failed, connection.state=ready, will retry...")
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
                             self?.getInitialState(powerState: powerState, attempt: attempt+1, completionBlock)
@@ -237,22 +260,38 @@ class DenonController {
         }
     }
     
-    func disconnect() {
-        DLog("DC disconnect()")
-        guard !self.demoMode, let streams = self.streams else {
+    func disconnectAll() {
+        DLog("DC disconnectAll()")
+        self.stream23?.disconnect()
+        self.stream23 = nil
+        self.stream1255?.disconnect()
+        self.stream1255 = nil
+    }
+    
+    fileprivate func disconnect(stream: DenonStreams) {
+        guard !self.demoMode else {
             return
         }
-        streams.disconnect()
-        self.streams = nil
+        if stream === self.stream23 {
+            DLog("DC disconnect() stream23")
+            self.stream23?.disconnect()
+            self.stream23 = nil
+        } else if stream === self.stream1255 {
+            DLog("DC disconnect() stream1255")
+            self.stream1255?.disconnect()
+            self.stream1255 = nil
+        } else {
+            assert(false)
+        }
     }
 
     func readMultiEQState(_ completionBlock: CommandNoResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(nil)
             return
         }
 
-        self.issueCommand("PSMULTEQ: ?", minLength: 10, responseLineRegex: "PSMULTEQ:.+", timeoutBlock: {
+        self.issueCommand("PSMULTEQ: ?", minLength: 10, responseLineRegex: "PSMULTEQ:.+", stream: stream, timeoutBlock: {
             completionBlock?(.tryAgain)
         }) { (str, err) in
             guard let _ = str else {
@@ -264,12 +303,12 @@ class DenonController {
     }
     
     func readSourceState(_ completionBlock: CommandNoResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(nil)
             return
         }
 
-        self.issueCommand("SI?", minLength: 4, responseLineRegex: "SI.+", timeoutBlock: {
+        self.issueCommand("SI?", minLength: 4, responseLineRegex: "SI.+", stream: stream, timeoutBlock: {
             completionBlock?(.tryAgain)
         }) { (str, err) in
             guard let _ = str else {
@@ -281,12 +320,12 @@ class DenonController {
     }
 
     func readPowerAndZ2State(_ completionBlock: CommandBoolResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(true, nil)
             return
         }
 
-        self.issueCommand("ZM?", minLength: 4, responseLineRegex: #"(ZMON)|(ZMOFF)|(PWSTANDBY)"#, timeoutBlock: {
+        self.issueCommand("ZM?", minLength: 4, responseLineRegex: #"(ZMON)|(ZMOFF)|(PWSTANDBY)"#, stream: stream, timeoutBlock: {
             completionBlock?(self.lastPower, nil)
         }) { (pwstr, err) in
             guard let pwstr = pwstr else {
@@ -315,7 +354,7 @@ class DenonController {
              SVON
              */
             // Note: Z201 means "zone 2 volume is currently set to 01"
-            self.issueCommand("Z2?", minLength: 4, responseLineRegex: nil, timeoutBlock: {
+            self.issueCommand("Z2?", minLength: 4, responseLineRegex: nil, stream: stream, timeoutBlock: {
                 work()
             }) { (_, _) in
                 work()
@@ -324,13 +363,16 @@ class DenonController {
     }
     
     func setPowerToStandby() {
-        self.issueCommand("PWSTANDBY", minLength: 4, responseLineRegex: #"PWSTANDBY.*"#, timeoutBlock: {
+        guard let stream = self.stream23 else {
+            return
+        }
+        self.issueCommand("PWSTANDBY", minLength: 4, responseLineRegex: #"PWSTANDBY.*"#, stream: stream, timeoutBlock: {
         }) { (_, _) in
         }
     }
     
     func togglePowerState(isZone2: Bool, _ completionBlock: ConnectCompletionBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             self.lastPower = !(self.lastPower!)
             completionBlock?(nil)
             return
@@ -345,7 +387,7 @@ class DenonController {
 
         // Turning OFF
         if powerState {
-            self.issueCommand(isZone2 ? "Z2OFF" : "ZMOFF", minLength: 4, responseLineRegex: isZone2 ? #"Z2OFF.*"# :  #"ZMOFF.*"#, timeoutBlock: {
+            self.issueCommand(isZone2 ? "Z2OFF" : "ZMOFF", minLength: 4, responseLineRegex: isZone2 ? #"Z2OFF.*"# :  #"ZMOFF.*"#, stream: stream, timeoutBlock: {
                 completionBlock?(nil)
             }) { (str, error) in
                 DispatchQueue.main.asyncAfter(deadline: .now() + CONNECTION_DELAY) { [weak self] in
@@ -362,7 +404,7 @@ class DenonController {
         }
 
         // Turning ON
-        self.issueCommand(isZone2 ? "Z2ON" : "ZMON", minLength: 4, responseLineRegex: isZone2 ? #"Z2ON.*"# : #"ZMON.*"#, timeoutTime: 3.9, timeoutBlock: {
+        self.issueCommand(isZone2 ? "Z2ON" : "ZMON", minLength: 4, responseLineRegex: isZone2 ? #"Z2ON.*"# : #"ZMON.*"#, timeoutTime: 3.9, stream: stream, timeoutBlock: {
             completionBlock?(nil)
         }) { (str, error) in
             guard let _ = str else {
@@ -381,12 +423,12 @@ class DenonController {
     }
 
     func readMuteState(_ completionBlock: CommandNoResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(nil)
             return
         }
 
-        self.issueCommand("MU?", minLength: 4, responseLineRegex: #"(MUON)|(MUOFF)"#, timeoutBlock: {
+        self.issueCommand("MU?", minLength: 4, responseLineRegex: #"(MUON)|(MUOFF)"#, stream: stream, timeoutBlock: {
             completionBlock?(.tryAgain)
         }) { (str, err) in
             guard let _ = str else {
@@ -394,7 +436,7 @@ class DenonController {
                 return
             }
             
-            self.issueCommand("Z2MU?", minLength: 4, responseLineRegex: nil, timeoutBlock: {
+            self.issueCommand("Z2MU?", minLength: 4, responseLineRegex: nil, stream: stream, timeoutBlock: {
                 completionBlock?(nil)
             }) { _, _ in
                 // response is handled in parseResponseHelper() below
@@ -404,7 +446,7 @@ class DenonController {
     }
     
     func toggleMuteState(isZone2: Bool, _ completionBlock: CommandNoResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             self.lastMute = !(self.lastMute!)
             completionBlock?(nil)
             return
@@ -420,7 +462,7 @@ class DenonController {
         if isZone2 {
             cmd = "Z2\(cmd)"
         }
-        self.issueCommand(cmd, minLength: 4, responseLineRegex: "\(cmd).*", timeoutBlock: {
+        self.issueCommand(cmd, minLength: 4, responseLineRegex: "\(cmd).*", stream: stream, timeoutBlock: {
             completionBlock?(nil)
         }) { (str, error) in
             guard let _ = str else {
@@ -438,12 +480,12 @@ class DenonController {
     
     // VOLUME: "80" is 0dB
     func readVolume(_ completionBlock: CommandNoResponseBlock = nil) {
-        guard !self.demoMode else {
+        guard !self.demoMode, let stream = self.stream23 else {
             completionBlock?(nil)
             return
         }
         
-        self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("MV?", minLength: 4, responseLineRegex: #"MV(?!MAX).*"#, stream: stream, timeoutBlock: {
             completionBlock?(.tryAgain)
         }) { (str, err) in
             guard let _ = str else {
@@ -462,7 +504,7 @@ class DenonController {
     
     // Expects whole values from 0...volumeMax only!
     func setVolume(_ volumeDouble: Double, isZone2: Bool, _ completionBlock: CommandDoubleResponseBlock = nil) {
-        guard (0...98).contains(volumeDouble) else {
+        guard (0...98).contains(volumeDouble), let stream = self.stream23 else {
             completionBlock?(nil, .invalidInput)
             return
         }
@@ -497,7 +539,7 @@ class DenonController {
             val = String(format: "%02d5", Int(volumeDouble))
         }
 
-        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", canQueue: false, minLength: 2, responseLineRegex: isZone2 ? #"Z2(?!ON)[0-9]{2,3}.*"# : #"MV(?!MAX).*"#, timeoutBlock: {
+        self.issueCommand("\(isZone2 ? "Z2" : "MV")\(val)", canQueue: false, minLength: 2, responseLineRegex: isZone2 ? #"Z2(?!ON)[0-9]{2,3}.*"# : #"MV(?!MAX).*"#, stream: stream, timeoutBlock: {
             completionBlock?(nil, .tryAgain) // don't report old values here since changing so fast
         }) { (str, err) in
             DLog("DC setVolume(\(volumeDouble)): (\(val)) -> \(str ?? "nil") for zone \(isZone2 ? "2" : "1")")
@@ -519,39 +561,34 @@ class DenonController {
         }
     }
     
-    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: @escaping ()->Void, _ completionBlock: CommandStringResponseBlock) {
+    func issueCommand(_ command: String, canQueue: Bool = true, minLength: Int, responseLineRegex: String?, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, stream: DenonStreams, readAfterWrite: Bool = true, timeoutBlock: (()->Void)? = nil, _ completionBlock: CommandStringResponseBlock = nil) {
         guard !self.demoMode else {
             completionBlock?(responseLineRegex, nil)
             return
         }
 
-        guard let streams = self.streams else {
-            completionBlock?(nil, .noStream)
-            return
-        }
-        
-        if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace }))") }
+        if self.verbose { DLog("DC\(stream.port) \(command.filter({ !$0.isWhitespace }))") }
         
         let tBlock = {
-            DLog("DC issueCommand: \(command) TIMED OUT")
-            timeoutBlock()
+            DLog("DC\(stream.port) issueCommand: \(command) TIMED OUT")
+            timeoutBlock?()
         }
 
-        streams.writeAndRead((command+"\r").data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex) { (str, error) in
+        stream.writeAndRead((command + String(stream.commandTerminator)).data(using: .ascii)!, canQueue: canQueue, timeoutTime: timeoutTime, timeoutBlock: tBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite) { (str, error) in
             if let error = error {
-                DLog("DC issueCommand: ERROR writing, disconnecting - \(error)")
-                self.disconnect()
+                DLog("DC\(stream.port) issueCommand: ERROR writing, disconnecting - \(error)")
+                self.disconnect(stream: stream)
                 completionBlock?(nil, .streamError(error))
                 return
             }
 
             if let str = str {
-                if self.verbose { DLog("DC \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
+                if self.verbose { DLog("DC\(stream.port) \(command.filter({ !$0.isWhitespace })) -> \(str.replacingOccurrences(of: "\r", with: "/"))") }
                 completionBlock?(str, nil)
                 return
             }
-            DLog("DC issueCommand: ERROR on readLine, disconnecting")
-            self.disconnect()
+            DLog("DC\(stream.port) issueCommand: ERROR on readLine, disconnecting")
+            self.disconnect(stream: stream)
             completionBlock?(nil, .noDataReturned)
         }
     }
@@ -584,7 +621,12 @@ class DenonController {
     
     // handle side-effects of parsing output that wasn't asked for
     // NOT ON MAIN THREAD
-    func parseResponseHelper(line: String.SubSequence) -> Bool {
+    func parseResponseHelper(line: String.SubSequence, stream: DenonStreams) -> Bool {
+        // HEOS
+        if line.hasPrefix("{\"heos\"") {
+            return self.heosHandler.parseResponseHelper(line: line, stream: stream)
+        }
+        
         // new: handle power state changes
         if line.hasPrefix("PWSTANDBY") {
             DispatchQueue.main.async {

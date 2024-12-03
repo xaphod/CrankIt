@@ -58,8 +58,8 @@ struct MultiEQSetting : DenonSetting {
     }
     
     func setValue(denon: DenonController?, _ completionBlock: CommandNoResponseBlock = nil) {
-        guard let denon = denon else { completionBlock?(CommandError.noDenon); return }
-        denon.issueCommand(self.code, minLength: self.code.count, responseLineRegex: "\(self.code).*", timeoutBlock: {
+        guard let denon = denon, let stream = denon.stream23 else { completionBlock?(CommandError.noDenon); return }
+        denon.issueCommand(self.code, minLength: self.code.count, responseLineRegex: "\(self.code).*", stream: stream, timeoutBlock: {
             completionBlock?(.tryAgain)
         }) { (str, err) in
             guard let str = str else {

@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import SDWebImage
 
 class HomeViewController: UIViewController {
     var zone: Int {
@@ -17,7 +18,7 @@ class HomeViewController: UIViewController {
             self.updateSource(source: newValue == 2 ? self.denon?.zone2Source : self.denon?.lastSource, isZone2: newValue == 2)
         }
     }
-
+    
     var denon: DenonController? {
         get {
             return AppDelegate.shared.denon
@@ -26,7 +27,7 @@ class HomeViewController: UIViewController {
             AppDelegate.shared.denon = newValue
         }
     }
-
+    
     var panSlowly = false {
         didSet {
             let isMuted = self.zone == 2 ? self.denon?.zone2Mute : self.denon?.lastMute
@@ -91,12 +92,13 @@ class HomeViewController: UIViewController {
             UserDefaults.standard.set(newValue.rawValue, forKey: "hvc.volumeDisplayStyle")
         }
     }
-
-    let VOLUME_CORNER_RADIUS: CGFloat = 40.0
+    
+    let VOLUME_CORNER_RADIUS: CGFloat = 30.0
     fileprivate var impactFeedbackHeavy: UIImpactFeedbackGenerator!
     fileprivate var selectionFeedback: UISelectionFeedbackGenerator!
-
-    @IBOutlet weak var buttonsStackviewCenterYConstraint: NSLayoutConstraint!
+    
+    private var masterBottomConstraintTouched = false
+    @IBOutlet weak var masterBottomConstraintForVolumeControls: NSLayoutConstraint?
     
     @IBOutlet var buttons: [UIButton]!
     @IBOutlet weak var muteButton: UIButton!
@@ -107,18 +109,18 @@ class HomeViewController: UIViewController {
     
     @IBOutlet weak var volumeBackgroundView: UIView!
     @IBOutlet weak var volumeForegroundView: UIView!
-
+    
     @IBOutlet weak var z2BackgroundView: UIView!
     @IBOutlet weak var z2ForegroundView: UIView!
     var z2VolumeHeightConstraint: NSLayoutConstraint?
     @IBOutlet weak var z2VolumeLabel: UILabel!
-
+    
     @IBOutlet weak var buttonsStackview: UIStackView!
     @IBOutlet weak var surroundModeLabel: UILabel!
     @IBOutlet weak var volumeLabel: UILabel!
     @IBOutlet weak var volButtonHigh: UIButton!
     @IBOutlet weak var volButtonMed: UIButton?
-    @IBOutlet weak var volButtonLow: UIButton!
+    @IBOutlet weak var volButtonLow: UIButton?
     @IBOutlet weak var powerButton: UIButton!
     @IBOutlet weak var powerCoverView: UIView!
     @IBOutlet weak var powerCoverButton: UIButton!
@@ -126,11 +128,17 @@ class HomeViewController: UIViewController {
     @IBOutlet weak var limitLineView: UIView!
     @IBOutlet weak var debugLabel: UILabel!
     @IBOutlet weak var coverView: UIView!
-    @IBOutlet weak var searchButton: UIButton!
     @IBOutlet weak var sourcesButton: UIButton!
     @IBOutlet weak var settingsButton: UIButton!
     @IBOutlet weak var multiEqButton: UIButton!
     @IBOutlet weak var zoneSegment: UISegmentedControl!
+    
+    // HEOS
+    fileprivate weak var heosStackview: UIStackView?
+    fileprivate weak var heosImageview: UIImageView?
+    fileprivate weak var heosTopLabel: UILabel?
+    fileprivate weak var heosBottomLabel: UILabel?
+    fileprivate weak var heosPlayButton: UIButton?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -138,13 +146,9 @@ class HomeViewController: UIViewController {
         if UIScreen.main.bounds.height < 665 { // iPhone SE1 / iphone 5S: 568
             self.buttonsStackview.spacing = 10
             self.volButtonMed?.removeFromSuperview()
-            self.buttonsStackviewCenterYConstraint.constant = 23 // shift downwards
         } else if UIScreen.main.bounds.height < 668 { // iphone 8 / SE2: 667
             self.buttonsStackview.spacing = 20
             self.volButtonMed?.removeFromSuperview()
-            self.buttonsStackviewCenterYConstraint.constant = 20 // shift downwards
-        } else {
-            self.buttonsStackviewCenterYConstraint.constant = 26 // shift downwards
         }
         
         self.debugLabel.text = ""
@@ -156,7 +160,7 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.clipsToBounds = true
         self.z2ForegroundView.clipsToBounds = true
         self.z2BackgroundView.clipsToBounds = true
-
+        
         let feedbackStyle: UIImpactFeedbackGenerator.FeedbackStyle
         if #available(iOS 13.0, *) {
             feedbackStyle = .rigid
@@ -172,15 +176,14 @@ class HomeViewController: UIViewController {
         
         if #available(iOS 13.0, *) {
             self.multiEqButton.setTitle(nil, for: .normal)
-            self.searchButton.setTitle(nil, for: .normal)
             self.settingsButton.setTitle(nil, for: .normal)
             self.debugLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.volumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.z2VolumeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.surroundModeLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             self.powerCoverView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
-            self.volButtonLow.setTitle(nil, for: .normal)
-            self.volButtonLow.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
+            self.volButtonLow?.setTitle(nil, for: .normal)
+            self.volButtonLow?.setImage(UIImage.init(systemName: "speaker.1.fill"), for: .normal)
             self.volButtonMed?.setTitle(nil, for: .normal)
             self.volButtonMed?.setImage(UIImage.init(systemName: "speaker.2.fill"), for: .normal)
             self.volButtonHigh.setTitle(nil, for: .normal)
@@ -200,14 +203,15 @@ class HomeViewController: UIViewController {
         self.limitButton.alpha = 0
         self.limitLineView.alpha = 0
     }
-
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         NotificationCenter.default.addObserver(self, selector: #selector(self.appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.appWillResignActive), name: UIApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.volumeChangedByButtons(notification:)), name: .volumeChangedByButton, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.nowPlayingChanged(notification:)), name: .nowPlayingChanged, object: nil)
         Logging.debugLabelAll = false
-        Logging.debugLabel = self.debugLabel
+        //        Logging.debugLabel = self.debugLabel
         UIApplication.shared.isIdleTimerDisabled = true
         self.denon?.hvc = self
         self.updateStackviewConstraints()
@@ -222,7 +226,7 @@ class HomeViewController: UIViewController {
         UIApplication.shared.isIdleTimerDisabled = false
         Logging.debugLabel = nil
         self.denon?.canReconnect = false
-        self.denon?.disconnect()
+        self.denon?.disconnectAll()
         self.denon?.hvc = nil
         self.denon = nil
     }
@@ -231,6 +235,8 @@ class HomeViewController: UIViewController {
         super.traitCollectionDidChange(previousTraitCollection)
         guard UIApplication.shared.applicationState != .background else { return }
         self.setColors()
+        self.updateMuteState(isZone2: false)
+        self.updateMuteState(isZone2: true)
     }
     
     override func viewDidLayoutSubviews() {
@@ -289,17 +295,18 @@ class HomeViewController: UIViewController {
             $0.tintColor = Colors.tint
             $0.setTitleColor(Colors.tint, for: .normal)
         }
-        self.searchButton.tintColor = Colors.reverseTint
-        self.searchButton.setTitleColor(Colors.reverseTint, for: .normal)
         self.settingsButton.tintColor = Colors.reverseTint
         self.settingsButton.setTitleColor(Colors.reverseTint, for: .normal)
         self.volumeBackgroundView.backgroundColor = Colors.tint
         self.volumeBackgroundView.layer.borderColor = Colors.reverseTint.cgColor
         self.volumeForegroundView.backgroundColor = Colors.reverseTint
         self.z2BackgroundView.backgroundColor = Colors.tint
-        self.z2BackgroundView.layer.borderColor = Colors.reverseTint.cgColor
-        self.z2ForegroundView.backgroundColor = Colors.reverseTint
-        self.volButtonLow.backgroundColor = Colors.green
+        
+        // assume zone 2 is off until we learn it isn't
+        self.z2BackgroundView.layer.borderColor = Colors.darkGray.cgColor
+        self.z2ForegroundView.backgroundColor = Colors.darkGray
+        
+        self.volButtonLow?.backgroundColor = Colors.green
         self.volButtonMed?.backgroundColor = Colors.yellow
         self.volButtonHigh.backgroundColor = Colors.orange
     }
@@ -319,10 +326,6 @@ class HomeViewController: UIViewController {
     
     @IBAction func reconnectPressed(_ sender: Any) {
         self.startConnection()
-    }
-    
-    @IBAction func discoveryPressed(_ sender: Any) {
-        self.navigationController?.popViewController(animated: true)
     }
     
     @IBAction func settingsButtonPressed(_ sender: UIButton) {
@@ -389,16 +392,16 @@ class HomeViewController: UIViewController {
     @IBAction func powerButtonLongPressed(_ sender: UILongPressGestureRecognizer) {
         self.denon?.setPowerToStandby()
     }
-
+    
     @IBAction func powerCoverButtonPressed(_ sender: UIButton) {
         self.zone = 1
         self.powerButtonPressed(sender)
     }
-
+    
     @IBAction func powerButtonPressed(_ sender: UIButton) {
         guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
-
+        
         dc.togglePowerState(isZone2: self.zone == 2) { (initialState) in
             guard let initialState = initialState else {
                 self.buttons.forEach { $0.isEnabled = true }
@@ -463,7 +466,7 @@ class HomeViewController: UIViewController {
             self.surroundModeLabel.text = "__"
         }
     }
-        
+    
     func updateVolume(_ volume: Double?, isZone2: Bool) {
         let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
         let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
@@ -520,7 +523,7 @@ class HomeViewController: UIViewController {
             } else {
                 mutedImage = UIImage.init(named: "mute_on")!
             }
-
+            
             guard let muted = muted else {
                 DLog("updateMuteState ERROR: \(String(describing: error))")
                 return
@@ -555,17 +558,17 @@ class HomeViewController: UIViewController {
     @IBAction func handleDoubleTap(_ sender: UITapGestureRecognizer) {
         self.muteButtonPressed(sender)
     }
-
+    
     @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 0
         self.zone = 2
     }
-
+    
     @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 1
         self.zone = 1
     }
-
+    
     // does have ended state
     @IBAction func handleLongPress(_ sender: UILongPressGestureRecognizer) {
         switch sender.state {
@@ -579,7 +582,6 @@ class HomeViewController: UIViewController {
         }
     }
     
-    // does not have ended state
     @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let isZone2 = gesture == self.z2PanGesture
         let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
@@ -589,6 +591,7 @@ class HomeViewController: UIViewController {
         
         if self.panBeginning {
             self.panBeginning = false
+            self.selectionFeedback.selectionChanged()
             self.denon?.readVolume { (err) in
                 if let err = err { DLog("HVC readVolume ERROR: \(err)") }
                 let volBool = isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume
@@ -597,9 +600,12 @@ class HomeViewController: UIViewController {
                     self.volumeAtStartOfPan = vol
                 }
             }
+        } else if gesture.state == .ended {
+            self.selectionFeedback.selectionChanged()
         }
-        guard let volume = self.volumeAtStartOfPan else { return }
 
+        guard let volume = self.volumeAtStartOfPan else { return }
+        
         let coords = gesture.translation(in: nil)
         let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
         var heightRange = bgView!.bounds.height
@@ -617,12 +623,12 @@ class HomeViewController: UIViewController {
         result = min(result, self.denon?.maxAllowedSafeVolume ?? self.denon?.volumeMax ?? 98)
         result = max(result, 0) // self.minimumVolume)
         result = result.round(nearest: isZone2 ? 1 : 0.5) // zone 2 cannot due half DBs like 33.5
-
+        
         if self.volumeLastDesiredInPan == result {
             return
         }
         self.volumeLastDesiredInPan = result
-
+        
         self.denon?.setVolume(result, isZone2: isZone2) { (v, err) in
             if let err = err {
                 if self.denon?.verbose ?? false { DLog("pan setVolume, ERROR: \(err)") }
@@ -650,6 +656,191 @@ class HomeViewController: UIViewController {
         case .zeroBottom:
             return "\(vol)"
         }
+    }
+    
+    // NOW PLAYING
+    @objc func nowPlayingChanged(notification: Notification) {
+        guard
+            let userInfo = notification.userInfo,
+            let song = userInfo[NowPlayingMediaNotificationKeys.song] as? String,
+            let artist = userInfo[NowPlayingMediaNotificationKeys.artist] as? String
+        else {
+            assert(false)
+            return
+        }
+        
+        // optionals
+        // let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
+        let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
+        
+        self.addHEOSDisplayComponents()
+        
+        self.heosImageview?.sd_setImage(with: mediaUrl)
+        self.heosTopLabel?.text = artist
+        self.heosBottomLabel?.text = song
+    }
+    
+    private func addHEOSDisplayComponents() {
+        if self.masterBottomConstraintTouched {
+            return
+        }
+        self.masterBottomConstraintTouched = true
+        let height: CGFloat = 140
+        self.masterBottomConstraintForVolumeControls?.constant = height // move up volume controls for now playing view
+        
+        // remove two butons from main/right buttons so the power button isn't right near heos controls
+        if UIDevice.current.userInterfaceIdiom != .pad {
+            self.volButtonMed?.removeFromSuperview()
+            self.volButtonLow?.removeFromSuperview()
+        }
+        
+        // HORIZONTAL stackview
+        let container = UIStackView.init()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.axis = .horizontal
+        container.distribution = .fill
+        container.spacing = 6
+        container.translatesAutoresizingMaskIntoConstraints = false
+        self.view.insertSubview(container, belowSubview: self.powerCoverView)
+        self.heosStackview = container
+        var constraints = [
+            container.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 8),
+            container.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            container.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -8),
+            container.heightAnchor.constraint(equalToConstant: height - 18)
+        ]
+        
+        let albumView = UIView.init()
+        let imageview = UIImageView.init()
+        imageview.translatesAutoresizingMaskIntoConstraints = false
+        albumView.addSubview(imageview)
+
+        let albumArtButton = UIButton.init()
+        albumArtButton.translatesAutoresizingMaskIntoConstraints = false
+        albumArtButton.addTarget(self, action: #selector(self.heosAlbumArtTouched(_:)), for: .touchUpInside)
+        albumView.addSubview(albumArtButton)
+        
+        self.heosImageview = imageview
+        constraints += [
+            albumView.widthAnchor.constraint(equalTo: albumView.heightAnchor, multiplier: 1),
+            albumArtButton.leadingAnchor.constraint(equalTo: albumView.leadingAnchor),
+            albumArtButton.trailingAnchor.constraint(equalTo: albumView.trailingAnchor),
+            albumArtButton.topAnchor.constraint(equalTo: albumView.topAnchor),
+            albumArtButton.bottomAnchor.constraint(equalTo: albumView.bottomAnchor),
+            imageview.leadingAnchor.constraint(equalTo: albumView.leadingAnchor),
+            imageview.trailingAnchor.constraint(equalTo: albumView.trailingAnchor),
+            imageview.topAnchor.constraint(equalTo: albumView.topAnchor),
+            imageview.bottomAnchor.constraint(equalTo: albumView.bottomAnchor),
+        ]
+        container.addArrangedSubview(albumView)
+
+        // rightView has labels, controls
+        let rightView = UIView.init()
+        container.addArrangedSubview(rightView)
+        
+        let topLabel = UILabel.init()
+        topLabel.translatesAutoresizingMaskIntoConstraints = false
+        let bottomLabel = UILabel.init()
+        bottomLabel.translatesAutoresizingMaskIntoConstraints = false
+        if #available(iOS 13.0, *) {
+            topLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            bottomLabel.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        } else {
+            topLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+            bottomLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        }
+        rightView.addSubview(topLabel)
+        rightView.addSubview(bottomLabel)
+        self.heosTopLabel = topLabel
+        self.heosBottomLabel = bottomLabel
+        
+        let buttonStack = UIStackView.init()
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonStack.axis = .horizontal
+        buttonStack.spacing = 4
+        rightView.addSubview(buttonStack)
+        constraints += [
+            buttonStack.centerYAnchor.constraint(equalTo: imageview.centerYAnchor),
+            buttonStack.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 4),
+            buttonStack.heightAnchor.constraint(equalToConstant: 52),
+            buttonStack.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor),
+        ]
+        
+        let prevButton = UIButton.init()
+        prevButton.translatesAutoresizingMaskIntoConstraints = false
+        prevButton.layer.cornerRadius = 26
+        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
+        prevButton.addTarget(self, action: #selector(self.prevButtonPressed(_:)), for: .touchUpInside)
+        constraints.append(prevButton.widthAnchor.constraint(equalToConstant: 52))
+        buttonStack.addArrangedSubview(prevButton)
+        
+        let playButton = UIButton.init()
+        playButton.translatesAutoresizingMaskIntoConstraints = false
+        playButton.layer.cornerRadius = 26
+        playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
+        playButton.addTarget(self, action: #selector(self.playPauseButtonPressed(_:)), for: .touchUpInside)
+        constraints.append(playButton.widthAnchor.constraint(equalToConstant: 52))
+        buttonStack.addArrangedSubview(playButton)
+        self.heosPlayButton = playButton
+        
+        let nextButton = UIButton.init()
+        nextButton.translatesAutoresizingMaskIntoConstraints = false
+        nextButton.layer.cornerRadius = 26
+        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
+        nextButton.addTarget(self, action: #selector(self.nextButtonPressed(_:)), for: .touchUpInside)
+        constraints.append(nextButton.widthAnchor.constraint(equalToConstant: 52))
+        buttonStack.addArrangedSubview(nextButton)
+        
+        // label constraints
+        constraints += [
+            bottomLabel.bottomAnchor.constraint(equalTo: rightView.bottomAnchor, constant: 1),
+            bottomLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 8),
+            bottomLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
+            topLabel.bottomAnchor.constraint(equalTo: bottomLabel.topAnchor, constant: -4),
+            topLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 8),
+            topLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
+        ]
+        
+        NSLayoutConstraint.activate(constraints)
+        self.view.setNeedsLayout()
+        self.view.layoutIfNeeded()
+    }
+    
+    @objc func prevButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        denon.heosHandler.playPrevious(stream: stream)
+        self.selectionFeedback.selectionChanged()
+    }
+    
+    @objc func nextButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        denon.heosHandler.playNext(stream: stream)
+        self.selectionFeedback.selectionChanged()
+    }
+    
+    @objc func playPauseButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        if denon.heosHandler.playState == .play {
+            denon.heosHandler.setPause(stream: stream)
+        } else {
+            denon.heosHandler.setPlay(stream: stream)
+        }
+        self.selectionFeedback.selectionChanged()
+    }
+    
+    func updatePlayPauseButton(playState: DenonHEOSHandler.PlayState) {
+        guard let playButton = self.heosPlayButton else { return }
+        if playState == .play {
+            playButton.setImage(UIImage.init(named: "pause-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
+        } else {
+            playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: Colors.reverseTint), for: .normal)
+        }
+    }
+    
+    @objc func heosAlbumArtTouched(_ sender: UIButton) {
+        guard let image = self.heosImageview?.image else { return }
+        let vc = AlbumArtViewController.init(image: image)
+        self.present(vc, animated: true)
     }
 }
 
