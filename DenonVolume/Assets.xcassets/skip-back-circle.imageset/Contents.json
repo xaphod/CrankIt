@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "skip-back-circle.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

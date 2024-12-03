@@ -18,7 +18,7 @@ class HomeViewController: UIViewController {
             self.updateSource(source: newValue == 2 ? self.denon?.zone2Source : self.denon?.lastSource, isZone2: newValue == 2)
         }
     }
-
+    
     var denon: DenonController? {
         get {
             return AppDelegate.shared.denon
@@ -27,7 +27,7 @@ class HomeViewController: UIViewController {
             AppDelegate.shared.denon = newValue
         }
     }
-
+    
     var panSlowly = false {
         didSet {
             let isMuted = self.zone == 2 ? self.denon?.zone2Mute : self.denon?.lastMute
@@ -92,11 +92,11 @@ class HomeViewController: UIViewController {
             UserDefaults.standard.set(newValue.rawValue, forKey: "hvc.volumeDisplayStyle")
         }
     }
-
+    
     let VOLUME_CORNER_RADIUS: CGFloat = 40.0
     fileprivate var impactFeedbackHeavy: UIImpactFeedbackGenerator!
     fileprivate var selectionFeedback: UISelectionFeedbackGenerator!
-
+    
     private var masterBottomConstraintTouched = false
     @IBOutlet weak var masterBottomConstraintForVolumeControls: NSLayoutConstraint?
     
@@ -109,12 +109,12 @@ class HomeViewController: UIViewController {
     
     @IBOutlet weak var volumeBackgroundView: UIView!
     @IBOutlet weak var volumeForegroundView: UIView!
-
+    
     @IBOutlet weak var z2BackgroundView: UIView!
     @IBOutlet weak var z2ForegroundView: UIView!
     var z2VolumeHeightConstraint: NSLayoutConstraint?
     @IBOutlet weak var z2VolumeLabel: UILabel!
-
+    
     @IBOutlet weak var buttonsStackview: UIStackView!
     @IBOutlet weak var surroundModeLabel: UILabel!
     @IBOutlet weak var volumeLabel: UILabel!
@@ -138,7 +138,7 @@ class HomeViewController: UIViewController {
     fileprivate weak var heosImageview: UIImageView?
     fileprivate weak var heosTopLabel: UILabel?
     fileprivate weak var heosBottomLabel: UILabel?
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         DLog("UIScreen.main height = \(UIScreen.main.bounds.height)")
@@ -159,7 +159,7 @@ class HomeViewController: UIViewController {
         self.volumeBackgroundView.clipsToBounds = true
         self.z2ForegroundView.clipsToBounds = true
         self.z2BackgroundView.clipsToBounds = true
-
+        
         let feedbackStyle: UIImpactFeedbackGenerator.FeedbackStyle
         if #available(iOS 13.0, *) {
             feedbackStyle = .rigid
@@ -202,7 +202,7 @@ class HomeViewController: UIViewController {
         self.limitButton.alpha = 0
         self.limitLineView.alpha = 0
     }
-
+    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         NotificationCenter.default.addObserver(self, selector: #selector(self.appDidBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
@@ -210,7 +210,7 @@ class HomeViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(self.volumeChangedByButtons(notification:)), name: .volumeChangedByButton, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.nowPlayingChanged(notification:)), name: .nowPlayingChanged, object: nil)
         Logging.debugLabelAll = false
-//        Logging.debugLabel = self.debugLabel
+        //        Logging.debugLabel = self.debugLabel
         UIApplication.shared.isIdleTimerDisabled = true
         self.denon?.hvc = self
         self.updateStackviewConstraints()
@@ -386,16 +386,16 @@ class HomeViewController: UIViewController {
     @IBAction func powerButtonLongPressed(_ sender: UILongPressGestureRecognizer) {
         self.denon?.setPowerToStandby()
     }
-
+    
     @IBAction func powerCoverButtonPressed(_ sender: UIButton) {
         self.zone = 1
         self.powerButtonPressed(sender)
     }
-
+    
     @IBAction func powerButtonPressed(_ sender: UIButton) {
         guard let dc = self.denon else { return }
         self.buttons.forEach { $0.isEnabled = false }
-
+        
         dc.togglePowerState(isZone2: self.zone == 2) { (initialState) in
             guard let initialState = initialState else {
                 self.buttons.forEach { $0.isEnabled = true }
@@ -460,7 +460,7 @@ class HomeViewController: UIViewController {
             self.surroundModeLabel.text = "__"
         }
     }
-        
+    
     func updateVolume(_ volume: Double?, isZone2: Bool) {
         let zoneText = isZone2 ? "Zone 2\n" : "Main Zone\n"
         let isMuted = isZone2 ? self.denon?.zone2Mute : self.denon?.lastMute
@@ -517,7 +517,7 @@ class HomeViewController: UIViewController {
             } else {
                 mutedImage = UIImage.init(named: "mute_on")!
             }
-
+            
             guard let muted = muted else {
                 DLog("updateMuteState ERROR: \(String(describing: error))")
                 return
@@ -552,17 +552,17 @@ class HomeViewController: UIViewController {
     @IBAction func handleDoubleTap(_ sender: UITapGestureRecognizer) {
         self.muteButtonPressed(sender)
     }
-
+    
     @IBAction func handleZ2BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 0
         self.zone = 2
     }
-
+    
     @IBAction func handleZ1BGTap(_ sender: UITapGestureRecognizer) {
         self.zoneSegment.selectedSegmentIndex = 1
         self.zone = 1
     }
-
+    
     // does have ended state
     @IBAction func handleLongPress(_ sender: UILongPressGestureRecognizer) {
         switch sender.state {
@@ -596,7 +596,7 @@ class HomeViewController: UIViewController {
             }
         }
         guard let volume = self.volumeAtStartOfPan else { return }
-
+        
         let coords = gesture.translation(in: nil)
         let bgView = isZone2 ? self.z2BackgroundView : self.volumeBackgroundView
         var heightRange = bgView!.bounds.height
@@ -614,12 +614,12 @@ class HomeViewController: UIViewController {
         result = min(result, self.denon?.maxAllowedSafeVolume ?? self.denon?.volumeMax ?? 98)
         result = max(result, 0) // self.minimumVolume)
         result = result.round(nearest: isZone2 ? 1 : 0.5) // zone 2 cannot due half DBs like 33.5
-
+        
         if self.volumeLastDesiredInPan == result {
             return
         }
         self.volumeLastDesiredInPan = result
-
+        
         self.denon?.setVolume(result, isZone2: isZone2) { (v, err) in
             if let err = err {
                 if self.denon?.verbose ?? false { DLog("pan setVolume, ERROR: \(err)") }
@@ -665,7 +665,7 @@ class HomeViewController: UIViewController {
         let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
         
         self.addHEOSDisplayComponents()
-
+        
         self.heosImageview?.sd_setImage(with: mediaUrl)
         self.heosTopLabel?.text = artist
         self.heosBottomLabel?.text = song
@@ -711,7 +711,7 @@ class HomeViewController: UIViewController {
         // rightView has labels, controls
         let rightView = UIView.init()
         container.addArrangedSubview(rightView)
-
+        
         let topLabel = UILabel.init()
         topLabel.translatesAutoresizingMaskIntoConstraints = false
         let bottomLabel = UILabel.init()
@@ -727,18 +727,73 @@ class HomeViewController: UIViewController {
         rightView.addSubview(bottomLabel)
         self.heosTopLabel = topLabel
         self.heosBottomLabel = bottomLabel
+        
+        let buttonStack = UIStackView.init()
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonStack.axis = .horizontal
+        buttonStack.spacing = 4
+        rightView.addSubview(buttonStack)
+        constraints += [
+            buttonStack.centerYAnchor.constraint(equalTo: imageview.centerYAnchor),
+            buttonStack.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 4),
+            buttonStack.heightAnchor.constraint(equalToConstant: 50),
+            buttonStack.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor),
+        ]
+        
+        let prevButton = UIButton.init()
+        prevButton.translatesAutoresizingMaskIntoConstraints = false
+        prevButton.layer.cornerRadius = 25
+        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        constraints.append(prevButton.widthAnchor.constraint(equalToConstant: 50))
+        buttonStack.addArrangedSubview(prevButton)
+        
+        let playButton = UIButton.init()
+        playButton.translatesAutoresizingMaskIntoConstraints = false
+        playButton.layer.cornerRadius = 25
+        playButton.setImage(UIImage.init(named: "play-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        constraints.append(playButton.widthAnchor.constraint(equalToConstant: 50))
+        buttonStack.addArrangedSubview(playButton)
+        
+        let nextButton = UIButton.init()
+        nextButton.translatesAutoresizingMaskIntoConstraints = false
+        nextButton.layer.cornerRadius = 25
+        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        constraints.append(nextButton.widthAnchor.constraint(equalToConstant: 50))
+        buttonStack.addArrangedSubview(nextButton)
+        
+        // label constraints
         constraints += [
             bottomLabel.bottomAnchor.constraint(equalTo: rightView.bottomAnchor, constant: 1),
-            bottomLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 0),
+            bottomLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 8),
             bottomLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
             topLabel.bottomAnchor.constraint(equalTo: bottomLabel.topAnchor, constant: -4),
-            topLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 0),
+            topLabel.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 8),
             topLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor, constant: 0),
         ]
         
         NSLayoutConstraint.activate(constraints)
         self.view.setNeedsLayout()
         self.view.layoutIfNeeded()
+    }
+    
+    func prevButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        denon.heosHandler.playPrevious(stream: stream)
+    }
+    
+    func nextButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        denon.heosHandler.playNext(stream: stream)
+    }
+    
+    func playPauseButtonPressed(_ sender: UIButton) {
+        guard let denon = self.denon, let stream = denon.stream1255 else { return }
+        denon.heosHandler.playPrevious(stream: stream)
+    }
+    
+    func updatePlayPauseButton(isPause: Bool) {
+        // TODO: impl
+        DLog("HEOS **** ISPAUSE: \(isPause)")
     }
 }
 

@@ -47,6 +47,26 @@ class DenonHEOSHandler {
         self.dc.issueCommand("heos://player/get_now_playing_media?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream, readAfterWrite: false)
     }
     
+    func playPrevious(stream: DenonStreams) {
+        guard let pid = self.pid else { return }
+        self.dc.issueCommand("heos://player/play_previous?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream)
+    }
+    
+    func playNext(stream: DenonStreams) {
+        guard let pid = self.pid else { return }
+        self.dc.issueCommand("heos://player/play_next?pid=\(pid)", minLength: 2, responseLineRegex: nil, stream: stream)
+    }
+    
+    func setPlay(stream: DenonStreams) {
+        guard let pid = self.pid else { return }
+        self.dc.issueCommand("heos://player/set_play_state?pid=\(pid)&state=play", minLength: 2, responseLineRegex: nil, stream: stream)
+    }
+
+    func setPause(stream: DenonStreams) {
+        guard let pid = self.pid else { return }
+        self.dc.issueCommand("heos://player/set_play_state?pid=\(pid)&state=pause", minLength: 2, responseLineRegex: nil, stream: stream)
+    }
+
     func parseResponseHelper(line: String.SubSequence, stream: DenonStreams) -> Bool {
         guard let data = String(line).data(using: .utf8), let base = try? decoder.decode(HEOSRoot.self, from: data) else {
             // could be a partial line that we get more from & complete later
@@ -76,6 +96,21 @@ class DenonHEOSHandler {
                     self.dc.issueCommand("heos://system/register_for_change_events?enable=on", minLength: 1, responseLineRegex: nil, stream: stream, readAfterWrite: false)
                 }
             }
+
+        case "system/register_for_change_events":
+            guard let pid = self.pid else { return true }
+            self.dc.issueCommand("heos://player/get_play_state?pid=\(pid)", minLength: 1, responseLineRegex: nil, stream: stream, readAfterWrite: false)
+
+        case "event/player_state_changed", "player/get_play_state":
+            /*
+             ("{\"heos\": {\"command\": \"event/player_state_changed\", \"message\": \"pid=-1320513458&state=pause\"}}\r\n")
+             */
+            let parts = self.parseMessageParts(base.heos.message)
+            guard let p = parts["pid"] as? String, Int(p) == self.pid, let state = parts["state"] as? String else {
+                assert(false)
+                return true
+            }
+            self.dc.hvc?.updatePlayPauseButton(isPause: state != "play") // so stop=pause
             
         default:
             DLog("DenonHEOSHandler: \(base.heos.command) is not yet handled")
@@ -83,6 +118,17 @@ class DenonHEOSHandler {
 
         // always return true - we received the complete struct
         return true
+    }
+    
+    private func parseMessageParts(_ message: String) -> [String:Any] {
+        // break pid=-1320513458&state=pause into [pid:-1320513458, state:pause]
+        let tuples = message.split(separator: "&")
+        return tuples.reduce([:]) { acc, cur in
+            let t = cur.split(separator: "=")
+            var acc = acc
+            acc[String(t[0])] = t[1]
+            return acc
+        }
     }
 }
 
