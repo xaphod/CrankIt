@@ -582,7 +582,6 @@ class HomeViewController: UIViewController {
         }
     }
     
-    // does not have ended state
     @IBAction func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let isZone2 = gesture == self.z2PanGesture
         let powerBool = isZone2 ? self.denon?.zone2Power : self.denon?.lastPower
@@ -592,6 +591,7 @@ class HomeViewController: UIViewController {
         
         if self.panBeginning {
             self.panBeginning = false
+            self.selectionFeedback.selectionChanged()
             self.denon?.readVolume { (err) in
                 if let err = err { DLog("HVC readVolume ERROR: \(err)") }
                 let volBool = isZone2 ? self.denon?.zone2Volume : self.denon?.lastVolume
@@ -600,7 +600,10 @@ class HomeViewController: UIViewController {
                     self.volumeAtStartOfPan = vol
                 }
             }
+        } else if gesture.state == .ended {
+            self.selectionFeedback.selectionChanged()
         }
+
         guard let volume = self.volumeAtStartOfPan else { return }
         
         let coords = gesture.translation(in: nil)
@@ -667,7 +670,7 @@ class HomeViewController: UIViewController {
         }
         
         // optionals
-        let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
+        // let album = userInfo[NowPlayingMediaNotificationKeys.album] as? String
         let mediaUrl = userInfo[NowPlayingMediaNotificationKeys.mediaUrl] as? URL
         
         self.addHEOSDisplayComponents()
@@ -806,11 +809,13 @@ class HomeViewController: UIViewController {
     @objc func prevButtonPressed(_ sender: UIButton) {
         guard let denon = self.denon, let stream = denon.stream1255 else { return }
         denon.heosHandler.playPrevious(stream: stream)
+        self.selectionFeedback.selectionChanged()
     }
     
     @objc func nextButtonPressed(_ sender: UIButton) {
         guard let denon = self.denon, let stream = denon.stream1255 else { return }
         denon.heosHandler.playNext(stream: stream)
+        self.selectionFeedback.selectionChanged()
     }
     
     @objc func playPauseButtonPressed(_ sender: UIButton) {
@@ -820,6 +825,7 @@ class HomeViewController: UIViewController {
         } else {
             denon.heosHandler.setPlay(stream: stream)
         }
+        self.selectionFeedback.selectionChanged()
     }
     
     func updatePlayPauseButton(playState: DenonHEOSHandler.PlayState) {
