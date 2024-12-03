@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		222CF7F0245A1E84002155D9 /* DenonStreams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222CF7EF245A1E84002155D9 /* DenonStreams.swift */; };
 		225D70C22CFCF02A004855BE /* DenonHEOSHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225D70C12CFCF028004855BE /* DenonHEOSHandler.swift */; };
+		225D70E22CFF60B1004855BE /* AlbumArtViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 225D70E12CFF60AC004855BE /* AlbumArtViewController.swift */; };
 		227F7183245D04430029D8C9 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 227F7182245D04430029D8C9 /* Logging.swift */; };
 		2292CCA2245996FC0063D7AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2292CCA1245996FC0063D7AD /* AppDelegate.swift */; };
 		2292CCA6245996FC0063D7AD /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2292CCA5245996FC0063D7AD /* HomeViewController.swift */; };
@@ -38,6 +39,7 @@
 		222CF7EF245A1E84002155D9 /* DenonStreams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenonStreams.swift; sourceTree = "<group>"; };
 		225D70C12CFCF028004855BE /* DenonHEOSHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DenonHEOSHandler.swift; sourceTree = "<group>"; };
 		225D70E02CFE6720004855BE /* DenonVolume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DenonVolume.entitlements; sourceTree = "<group>"; };
+		225D70E12CFF60AC004855BE /* AlbumArtViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumArtViewController.swift; sourceTree = "<group>"; };
 		227F7182245D04430029D8C9 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		2292CC9E245996FC0063D7AD /* DenonVolume.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DenonVolume.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2292CCA1245996FC0063D7AD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 				22E1C6E92466203B00A16377 /* sweep.mp3 */,
 				2292DA70245D1F66009D0BEC /* GoogleService-Info.plist */,
 				2292CCAF245996FE0063D7AD /* Info.plist */,
+				225D70E12CFF60AC004855BE /* AlbumArtViewController.swift */,
 				2292CCA1245996FC0063D7AD /* AppDelegate.swift */,
 				22C77D712460F86F00EA3F2C /* AudioController.swift */,
 				22E08FBF245C985500586946 /* Colors.swift */,
@@ -306,6 +309,7 @@
 				222CF7F0245A1E84002155D9 /* DenonStreams.swift in Sources */,
 				2292CCA6245996FC0063D7AD /* HomeViewController.swift in Sources */,
 				22E08FBE245C94DD00586946 /* RootViewController.swift in Sources */,
+				225D70E22CFF60B1004855BE /* AlbumArtViewController.swift in Sources */,
 				2292CCA2245996FC0063D7AD /* AppDelegate.swift in Sources */,
 				22BD02002459EBBC000EBDC0 /* Extensions.swift in Sources */,
 				2296CE6E24645C3200B7F5A5 /* DenonMultiEQ.swift in Sources */,

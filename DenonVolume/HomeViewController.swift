@@ -93,7 +93,7 @@ class HomeViewController: UIViewController {
         }
     }
     
-    let VOLUME_CORNER_RADIUS: CGFloat = 40.0
+    let VOLUME_CORNER_RADIUS: CGFloat = 30.0
     fileprivate var impactFeedbackHeavy: UIImpactFeedbackGenerator!
     fileprivate var selectionFeedback: UISelectionFeedbackGenerator!
     
@@ -707,13 +707,30 @@ class HomeViewController: UIViewController {
             container.heightAnchor.constraint(equalToConstant: height - 14)
         ]
         
+        let albumView = UIView.init()
         let imageview = UIImageView.init()
-        container.addArrangedSubview(imageview)
+        imageview.translatesAutoresizingMaskIntoConstraints = false
+        albumView.addSubview(imageview)
+
+        let albumArtButton = UIButton.init()
+        albumArtButton.translatesAutoresizingMaskIntoConstraints = false
+        albumArtButton.addTarget(self, action: #selector(self.heosAlbumArtTouched(_:)), for: .touchUpInside)
+        albumView.addSubview(albumArtButton)
+        
         self.heosImageview = imageview
         constraints += [
-            imageview.widthAnchor.constraint(equalTo: imageview.heightAnchor, multiplier: 1),
+            albumView.widthAnchor.constraint(equalTo: albumView.heightAnchor, multiplier: 1),
+            albumArtButton.leadingAnchor.constraint(equalTo: albumView.leadingAnchor),
+            albumArtButton.trailingAnchor.constraint(equalTo: albumView.trailingAnchor),
+            albumArtButton.topAnchor.constraint(equalTo: albumView.topAnchor),
+            albumArtButton.bottomAnchor.constraint(equalTo: albumView.bottomAnchor),
+            imageview.leadingAnchor.constraint(equalTo: albumView.leadingAnchor),
+            imageview.trailingAnchor.constraint(equalTo: albumView.trailingAnchor),
+            imageview.topAnchor.constraint(equalTo: albumView.topAnchor),
+            imageview.bottomAnchor.constraint(equalTo: albumView.bottomAnchor),
         ]
-        
+        container.addArrangedSubview(albumView)
+
         // rightView has labels, controls
         let rightView = UIView.init()
         container.addArrangedSubview(rightView)
@@ -812,6 +829,12 @@ class HomeViewController: UIViewController {
         } else {
             playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: .white), for: .normal)
         }
+    }
+    
+    @objc func heosAlbumArtTouched(_ sender: UIButton) {
+        guard let image = self.heosImageview?.image else { return }
+        let vc = AlbumArtViewController.init(image: image)
+        self.present(vc, animated: true)
     }
 }
 
