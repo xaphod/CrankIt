@@ -737,33 +737,33 @@ class HomeViewController: UIViewController {
         constraints += [
             buttonStack.centerYAnchor.constraint(equalTo: imageview.centerYAnchor),
             buttonStack.leadingAnchor.constraint(equalTo: rightView.leadingAnchor, constant: 4),
-            buttonStack.heightAnchor.constraint(equalToConstant: 50),
+            buttonStack.heightAnchor.constraint(equalToConstant: 52),
             buttonStack.trailingAnchor.constraint(lessThanOrEqualTo: rightView.trailingAnchor),
         ]
         
         let prevButton = UIButton.init()
         prevButton.translatesAutoresizingMaskIntoConstraints = false
-        prevButton.layer.cornerRadius = 25
-        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        prevButton.layer.cornerRadius = 26
+        prevButton.setImage(UIImage.init(named: "skip-back-circle")!.sd_tintedImage(with: .white), for: .normal)
         prevButton.addTarget(self, action: #selector(self.prevButtonPressed(_:)), for: .touchUpInside)
-        constraints.append(prevButton.widthAnchor.constraint(equalToConstant: 50))
+        constraints.append(prevButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(prevButton)
         
         let playButton = UIButton.init()
         playButton.translatesAutoresizingMaskIntoConstraints = false
-        playButton.layer.cornerRadius = 25
-        playButton.setImage(UIImage.init(named: "play-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        playButton.layer.cornerRadius = 26
+        playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: .white), for: .normal)
         playButton.addTarget(self, action: #selector(self.playPauseButtonPressed(_:)), for: .touchUpInside)
-        constraints.append(playButton.widthAnchor.constraint(equalToConstant: 50))
+        constraints.append(playButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(playButton)
         self.heosPlayButton = playButton
         
         let nextButton = UIButton.init()
         nextButton.translatesAutoresizingMaskIntoConstraints = false
-        nextButton.layer.cornerRadius = 25
-        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+        nextButton.layer.cornerRadius = 26
+        nextButton.setImage(UIImage.init(named: "skip-forward-circle")!.sd_tintedImage(with: .white), for: .normal)
         nextButton.addTarget(self, action: #selector(self.nextButtonPressed(_:)), for: .touchUpInside)
-        constraints.append(nextButton.widthAnchor.constraint(equalToConstant: 50))
+        constraints.append(nextButton.widthAnchor.constraint(equalToConstant: 52))
         buttonStack.addArrangedSubview(nextButton)
         
         // label constraints
@@ -803,9 +803,9 @@ class HomeViewController: UIViewController {
     func updatePlayPauseButton(playState: DenonHEOSHandler.PlayState) {
         guard let playButton = self.heosPlayButton else { return }
         if playState == .play {
-            playButton.setImage(UIImage.init(named: "pause-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+            playButton.setImage(UIImage.init(named: "pause-circle")!.sd_tintedImage(with: .white), for: .normal)
         } else {
-            playButton.setImage(UIImage.init(named: "play-circle")!.sd_resizedImage(with: .init(width: 50, height: 50), scaleMode: .aspectFill)!.sd_tintedImage(with: .white), for: .normal)
+            playButton.setImage(UIImage.init(named: "play-circle")!.sd_tintedImage(with: .white), for: .normal)
         }
     }
 }
