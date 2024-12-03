@@ -173,7 +173,7 @@ class DenonController {
                 self.stream1255?.dc = nil
                 self.stream1255 = nil
             } else {
-                assert(false)
+                return
             }
 
         case .waiting(_):
