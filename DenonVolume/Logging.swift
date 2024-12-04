@@ -8,8 +8,14 @@
 
 import UIKit
 
+let timeSeparator = " - "
+
 func DLog(_ format: String, _ args: CVarArg...) {
-    Logging.LLog(format, args)
+    let formatter = DateFormatter.init()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSSS"
+    let stringToLog = formatter.string(from: Date()) + timeSeparator + format
+
+    Logging.LLog(stringToLog, args)
 }
 
 class Logging {

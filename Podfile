@@ -7,6 +7,7 @@ target 'DenonVolume' do
 
   # Pods for DenonVolume
   pod 'XMLCoder'
+  pod 'SDWebImage'
 
   # GOOG
   pod 'Firebase'

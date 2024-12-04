@@ -14,65 +14,75 @@ class DenonStreams {
     let connection: NWConnection
     let queue: DispatchQueue
     let lock = NSLock.init()
+    let port: Int
+    let commandTerminator: Character
+    let responseTerminator: Character
     private var unprocessedReceived = ""
     static let TIMEOUT_TIME: TimeInterval = 2
     var lastOpMillis: Double = 0
     
     fileprivate var receiveWaiter: ((String?)->Void)?
 
-    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController) {
+    init(host: String, port: Int, queue: DispatchQueue, dc: DenonController, commandTerminator: Character, responseTerminator: Character) {
+        self.commandTerminator = commandTerminator
+        self.responseTerminator = responseTerminator
         self.dc = dc
+        self.port = port
         let connection = NWConnection.init(host: .init(host), port: .init(integerLiteral: NWEndpoint.Port.IntegerLiteralType(port)), using: .tcp)
         self.connection = connection
         self.queue = queue
-        connection.stateUpdateHandler = self.stateUpdateHandler
+        connection.stateUpdateHandler = { [weak self] state in
+            guard let self = self else { return }
+            self.stateUpdateHandler(stream: self, state: state)
+        }
         connection.start(queue: queue)
     }
     
     func disconnect() {
-        DLog("DenonStreams: disconnect()")
+        DLog("DenonStreams\(self.port): disconnect()")
         self.connection.cancel()
     }
     
-    fileprivate func stateUpdateHandler(state: NWConnection.State) {
+    fileprivate func stateUpdateHandler(stream: DenonStreams, state: NWConnection.State) {
         let waiter = self.receiveWaiter
         self.receiveWaiter = nil
         waiter?(nil)
 
         switch state {
         case .cancelled:
-            DLog("stateUpdateHandler: cancelled")
+            DLog("stateUpdateHandler\(self.port): cancelled")
         case .failed(let error):
-            DLog("stateUpdateHandler: ERROR - \(error)")
+            DLog("stateUpdateHandler\(self.port): ERROR - \(error)")
         case .preparing:
-            DLog("stateUpdateHandler: preparing")
+            DLog("stateUpdateHandler\(self.port): preparing")
         case .waiting(let error):
-            DLog("stateUpdateHandler: waiting, \(error)")
+            DLog("stateUpdateHandler\(self.port): waiting, \(error)")
             switch error {
             case .posix(let posixErrorCode):
                 if posixErrorCode == .ECONNREFUSED {
-                    DLog("connectionStateChanged: Connection Refused")
+                    DLog("connectionStateChanged\(self.port): Connection Refused")
                 }
             default:
                 break
             }
 
         case .setup:
-            DLog("stateUpdateHandler: setup")
+            DLog("stateUpdateHandler\(self.port): setup")
         case .ready:
-            DLog("stateUpdateHandler: ready")
+            DLog("stateUpdateHandler\(self.port): ready (connected), time since app became active = \(abs((self.dc?.lastBecameActive ?? Date.init()).timeIntervalSinceNow))")
             self.receiveLoop()
         @unknown default:
             assert(false)
             break
         }
         DispatchQueue.main.async {
-            self.dc?.connectionStateChanged(state: state)
+            self.dc?.connectionStateChanged(stream: stream, state: state)
         }
     }
     
     fileprivate func receiveLoop() {
         assert(!Thread.current.isMainThread)
+        DLog("DenonStreams\(self.port) receiveLoop()")
 
         self.connection.receive(minimumIncompleteLength: 2, maximumLength: 65534) { [weak self] (data, _, _, error) in
             guard let self = self else { return }
@@ -80,7 +90,7 @@ class DenonStreams {
             if let data = data, let str = String.init(data: data, encoding: .ascii) {
                 received = str
                 if self.dc?.verbose == true {
-                    DLog("received, has waiter=\(self.receiveWaiter != nil): \(received)")
+                    DLog("DenonStreams\(self.port) received, has waiter=\(self.receiveWaiter != nil): \(received)")
                 }
             }
             let waiter = self.receiveWaiter
@@ -92,11 +102,11 @@ class DenonStreams {
             }
 
             if let error = error {
-                DLog("DenonStreams receiveLoop(): error, falling off - \(error)")
+                DLog("DenonStreams\(self.port) receiveLoop(): error, falling off - \(error)")
                 return
             }
             guard self.connection.state == .ready else {
-                DLog("DenonStreams receiveLoop(): state=\(self.connection.state), falling off.")
+                DLog("DenonStreams\(self.port) receiveLoop(): state=\(self.connection.state), falling off.")
                 return
             }
             self.receiveLoop()
@@ -109,22 +119,23 @@ class DenonStreams {
         var timeoutBlock: (()->Void)?
         var minLength: Int
         var responseLineRegex: String?
+        var readAfterWrite: Bool
         var completionBlock: (String?, Error?)->Void
     }
     private var writeQueue = [QueueItem]()
 
-    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, _ completionBlock: @escaping (String?, Error?)->Void) {
+    func writeAndRead(_ data: Data, canQueue: Bool, timeoutTime: TimeInterval = DenonStreams.TIMEOUT_TIME, timeoutBlock: (()->Void)?, minLength: Int, responseLineRegex: String?, readAfterWrite: Bool, _ completionBlock: @escaping (String?, Error?)->Void) {
         self.queue.async {
             let hasLock = self.lock.try()
             if !hasLock, !canQueue {
                 return // drop it
             }
-            let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, completionBlock: completionBlock)
+            let queueItem = QueueItem.init(data: data, timeoutTime: timeoutTime, timeoutBlock: timeoutBlock, minLength: minLength, responseLineRegex: responseLineRegex, readAfterWrite: readAfterWrite, completionBlock: completionBlock)
             self.writeQueue.insert(queueItem, at: 0)
             if hasLock {
                 let _ = self.writeNext()
             } else {
-                DLog("DenonStreams write: lock busy for \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1))), added to queue. Queue length = \(self.writeQueue.count)")
+                DLog("DenonStreams\(self.port) write: lock busy for \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1))), added to queue. Queue length = \(self.writeQueue.count)")
             }
         }
     }
@@ -136,7 +147,7 @@ class DenonStreams {
         }
         let queueItem = self.writeQueue.removeLast()
         if self.dc?.verbose == true {
-            DLog("DenonStreams writeNext: \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1)))")
+            DLog("DenonStreams\(self.port) writeNext: \(String(describing: String.init(data: queueItem.data, encoding: .ascii)?.dropLast(1)))")
         }
 
         let millis = abs(Date.init().timeIntervalSince1970) * 1000.0
@@ -144,7 +155,7 @@ class DenonStreams {
         self.queue.asyncAfter(deadline: .now() + Self.TIMEOUT_TIME) { [weak self] in
             guard let self = self else { return }
             guard self.lastOpMillis == millis else { return }
-            DLog("DenonStreams writeNext TIMEOUT")
+            DLog("DenonStreams\(self.port) writeNext TIMEOUT")
             self.lock.unlock()
             self.connection.cancel()
             DispatchQueue.main.async {
@@ -155,12 +166,12 @@ class DenonStreams {
         self.connection.send(content: queueItem.data, completion: .contentProcessed({ [weak self] (error) in
             guard let self = self else { return }
             guard self.lastOpMillis == millis else {
-                DLog("DenonStreams writeNext completed AFTER timeout")
+                DLog("DenonStreams\(self.port) writeNext completed AFTER timeout")
                 return
             }
             self.lastOpMillis = abs(Date.init().timeIntervalSince1970) * 1000.0
             if let error = error {
-                DLog("DenonStreams writeNext ERROR: \(error)")
+                DLog("DenonStreams\(self.port) writeNext ERROR: \(error)")
                 if !self.writeNext() {
                     self.lock.unlock()
                 }
@@ -171,7 +182,13 @@ class DenonStreams {
                 return
             }
 
-            self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            if queueItem.readAfterWrite {
+                self._readLine(minLength: queueItem.minLength, responseLineRegex: queueItem.responseLineRegex, timeoutTime: queueItem.timeoutTime, timeoutBlock: queueItem.timeoutBlock, queueItem.completionBlock)
+            } else {
+                if !self.writeNext() {
+                    self.lock.unlock()
+                }
+            }
         }))
         
         return true
@@ -256,7 +273,7 @@ class DenonStreams {
                     return
                 }
                 
-                DLog("DenonStreams readLine - nothing received")
+                DLog("DenonStreams\(self.port) readLine - nothing received")
                 if !self.writeNext() {
                     self.lock.unlock()
                 }
@@ -270,8 +287,8 @@ class DenonStreams {
     fileprivate func parseResponse(additionalReceived: String?, responseLineRegex: String?) -> String? {
         let str = self.unprocessedReceived.appending(additionalReceived ?? "")
         self.unprocessedReceived = ""
-        let lineCount = str.reduce(0, { $0 + ($1 == "\r" ? 1 : 0) })
-        var lines = str.split(separator: "\r")
+        let lineCount = str.reduce(0, { $0 + ($1 == self.responseTerminator ? 1 : 0) })
+        var lines = str.split(separator: self.responseTerminator)
         guard lineCount > 0 && lines.count > 0 else {
             self.unprocessedReceived = str
             return nil
@@ -279,8 +296,11 @@ class DenonStreams {
 
         // handle: denon sends MV91, we receive only "blah\rBlah\rMV9" here
         var incomplete: String?
-        if str.last != "\r" {
-            DLog("*** DS: incomplete last line case, handling...")
+        if str.last != self.responseTerminator {
+            DLog("DenonStreams\(self.port): incomplete last line case, handling...")
+            if self.port == 1255 {
+                DLog("BREAK DEBUG")
+            }
             incomplete = String(lines.removeLast())
         }
 
@@ -289,14 +309,14 @@ class DenonStreams {
         var sinceLastMatch: String?
         for i in 0..<lines.count {
             let line = lines[i]
-            let parsedAsEvent = self.dc?.parseResponseHelper(line: line) == true
+            let parsedAsEvent = self.dc?.parseResponseHelper(line: line, stream: self) == true
             if let responseLineRegex = responseLineRegex, line.range(of: responseLineRegex, options: .regularExpression) != nil {
                 sinceLastMatch = nil
                 retval = String.init(line)
             } else if retval != nil, !parsedAsEvent {
-                sinceLastMatch = (sinceLastMatch ?? "") + line + "\r"
+                sinceLastMatch = (sinceLastMatch ?? "") + line + String(self.responseTerminator)
             } else if !parsedAsEvent {
-                linesNotParsedAsEvents = (linesNotParsedAsEvents ?? "") + line + "\r"
+                linesNotParsedAsEvents = (linesNotParsedAsEvents ?? "") + line + String(self.responseTerminator)
             }
         }
 
@@ -304,7 +324,7 @@ class DenonStreams {
             if let sinceLastMatch = sinceLastMatch {
                 self.unprocessedReceived = sinceLastMatch
                 if self.dc?.verbose == true {
-                    DLog("DenonStreams checkIfComplete: unprocessedReceived.count=\(self.unprocessedReceived.count),  found extra chars after last match:\n")
+                    DLog("DenonStreams\(self.port) checkIfComplete: unprocessedReceived.count=\(self.unprocessedReceived.count),  found extra chars after last match:\n")
                     DLog(sinceLastMatch.replacingOccurrences(of: "\r", with: "\n"))
                 }
             }
