@@ -332,6 +332,10 @@ class HomeViewController: UIViewController {
         self.openAlertSettings(sender: sender)
     }
     
+    @IBAction func discoveryPressed(_ sender: Any) {
+        self.navigationController?.popViewController(animated: true)
+    }
+    
     @objc func volumeChangedByButtons(notification: Notification) {
         guard let userInfo = notification.userInfo, let v = userInfo["volume"] as? Double else {
             assert(false)
