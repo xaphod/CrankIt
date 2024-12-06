@@ -281,7 +281,7 @@ class DenonController {
             self.stream1255?.disconnect()
             self.stream1255 = nil
         } else {
-            assert(false)
+            stream.disconnect()
         }
     }
 
